@@ -6,7 +6,7 @@ chunk by checking the box.
 ## Phase 1 — Foundations
 
 - [x] **01 — Project Skeleton & Dev Environment** (`chunks/01-skeleton.md`)
-- [ ] **02 — Configuration & Profiles** (`chunks/02-config-profiles.md`)
+- [x] **02 — Configuration & Profiles** (`chunks/02-config-profiles.md`)
 - [ ] **03 — Storage Layer** (`chunks/03-storage.md`)
 - [ ] **04 — LLM Transport Layer** (`chunks/04-transport.md`)
 

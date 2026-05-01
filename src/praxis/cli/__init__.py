@@ -4,6 +4,10 @@ import typer
 
 from praxis import __version__
 
+from .config_cmd import config_app
+from .init_cmd import init
+from .profile import profile_app
+
 app = typer.Typer(
     name="praxis",
     help="Praxis — an agent-led IT business analysis framework.",
@@ -21,3 +25,8 @@ def main() -> None:
 def version() -> None:
     """Print the Praxis version."""
     typer.echo(f"praxis {__version__}")
+
+
+app.command("init")(init)
+app.add_typer(profile_app)
+app.add_typer(config_app)
