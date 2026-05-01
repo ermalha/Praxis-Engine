@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+
+# Testing & quality tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Praxis runtime state
+.praxis/
+
+# Environment & secrets
+.env
+.envrc
+
+# IDEs
+.idea/
+.vscode/
+
+# Editors
+*.swp
+*.swo
+*~
