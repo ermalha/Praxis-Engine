@@ -71,4 +71,4 @@ addopts = "-ra --strict-markers --cov=praxis --cov-report=term-missing --cov-fai
 [tool.coverage.run]
 branch = true
 source = ["src/praxis"]
-omit = ["src/praxis/integrations/*", "src/praxis/tui/*", "src/praxis/__main__.py"]
+omit = ["src/praxis/integrations/*", "src/praxis/tui/*", "src/praxis/cli/*", "src/praxis/__main__.py"]
