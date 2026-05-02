@@ -14,7 +14,7 @@ chunk by checking the box.
 
 - [x] **05 — Tool Registry & Execution** (`chunks/05-tools.md`)
 - [x] **06 — Skill System** (`chunks/06-skills.md`)
-- [ ] **07 — Engagement Model API** (`chunks/07-engagement-model.md`)
+- [x] **07 — Engagement Model API** (`chunks/07-engagement-model.md`)
 - [ ] **08 — Conversation Loop** (`chunks/08-conversation-loop.md`) — **Mini-Hermes milestone**
 
 ## Phase 3 — Praxis Distinctives

@@ -92,16 +92,17 @@ def init_engagement(
 
     # Write empty-but-valid engagement files
     _empty_files: dict[str, object] = {
-        "engagement/glossary.yaml": {"terms": []},
-        "engagement/stakeholders.yaml": {"stakeholders": []},
-        "engagement/open-questions.yaml": {"questions": []},
+        "engagement/glossary.yaml": {"schema_version": 1, "terms": []},
+        "engagement/stakeholders.yaml": {"schema_version": 1, "stakeholders": []},
+        "engagement/open-questions.yaml": {"schema_version": 1, "questions": []},
         "engagement/assumptions-and-constraints.yaml": {
+            "schema_version": 1,
             "assumptions": [],
             "constraints": [],
         },
-        "engagement/system-landscape.yaml": {"systems": []},
-        "engagement/timeline.yaml": {"milestones": []},
-        "engagement/risks.yaml": {"risks": []},
+        "engagement/system-landscape.yaml": {"schema_version": 1, "systems": []},
+        "engagement/timeline.yaml": {"schema_version": 1, "milestones": []},
+        "engagement/risks.yaml": {"schema_version": 1, "risks": []},
     }
     for rel_path, content in _empty_files.items():
         _write_yaml_atomic(praxis_dir / rel_path, content)
