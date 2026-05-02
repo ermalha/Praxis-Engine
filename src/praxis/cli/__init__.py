@@ -4,6 +4,7 @@ import typer
 
 from praxis import __version__
 
+from .audit_cmd import audit_app
 from .config_cmd import config_app
 from .init_cmd import init
 from .profile import profile_app
@@ -30,3 +31,4 @@ def version() -> None:
 app.command("init")(init)
 app.add_typer(profile_app)
 app.add_typer(config_app)
+app.add_typer(audit_app)

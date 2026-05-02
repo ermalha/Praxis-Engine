@@ -13,6 +13,7 @@ import yaml
 
 from praxis.audit import emit
 from praxis.errors import ConfigError
+from praxis.storage.db import init_db
 
 from .models import EngagementConfig, Methodology
 
@@ -110,6 +111,10 @@ def init_engagement(
     tmp = lessons.with_suffix(".tmp")
     tmp.write_text("# Lessons Learned\n")
     tmp.rename(lessons)
+
+    # Initialize SQLite database with migrations
+    db_path = praxis_dir / "state" / "praxis.db"
+    init_db(db_path)
 
     emit(
         "engagement.initialized",

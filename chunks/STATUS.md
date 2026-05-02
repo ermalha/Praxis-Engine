@@ -7,7 +7,7 @@ chunk by checking the box.
 
 - [x] **01 — Project Skeleton & Dev Environment** (`chunks/01-skeleton.md`)
 - [x] **02 — Configuration & Profiles** (`chunks/02-config-profiles.md`)
-- [ ] **03 — Storage Layer** (`chunks/03-storage.md`)
+- [x] **03 — Storage Layer** (`chunks/03-storage.md`)
 - [ ] **04 — LLM Transport Layer** (`chunks/04-transport.md`)
 
 ## Phase 2 — Agent Core
