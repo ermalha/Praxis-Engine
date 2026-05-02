@@ -14,6 +14,7 @@ from .elicit_cmd import elicit
 from .engagement_cmd import engagement_app
 from .init_cmd import init
 from .profile import profile_app
+from .queue_cmd import queue_app
 from .session_cmd import session_app
 from .skill_cmd import skill_app
 from .tool_cmd import tool_app
@@ -47,6 +48,7 @@ app.add_typer(config_app)
 app.add_typer(audit_app)
 app.add_typer(doctor_app)
 app.add_typer(engagement_app)
+app.add_typer(queue_app)
 app.add_typer(session_app)
 app.add_typer(skill_app)
 app.add_typer(tool_app)
