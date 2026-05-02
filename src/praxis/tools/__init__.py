@@ -1,6 +1,7 @@
 """Praxis tool subsystem — registry, execution, and approval."""
 
 # Auto-register built-in tools when the package is imported
+import praxis.tools.agent_tools as _agent_tools  # noqa: F401
 import praxis.tools.builtin as _builtin  # noqa: F401
 from praxis.tools.context import ToolContext
 from praxis.tools.decorator import tool
