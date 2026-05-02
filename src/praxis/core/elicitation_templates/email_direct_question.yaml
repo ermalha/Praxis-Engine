@@ -1,0 +1,18 @@
+# Template: email direct question
+mode: direct_question
+channel: email
+template: |
+  Subject: Quick question on {{topic}}
+
+  Hi {{recipient_name}},
+
+  I'm working on {{context}} and need your input on a specific point:
+
+  {{question}}
+
+  {{additional_context}}
+
+  Could you share your perspective on this? A brief reply would be very helpful.
+
+  Thanks,
+  {{sender_name}}

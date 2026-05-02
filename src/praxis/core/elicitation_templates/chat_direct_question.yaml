@@ -1,0 +1,9 @@
+# Template: chat direct question (Teams/Slack)
+mode: direct_question
+channel: chat
+template: |
+  Hi {{recipient_name}}, quick question about {{context}}:
+
+  {{question}}
+
+  {{additional_context}}

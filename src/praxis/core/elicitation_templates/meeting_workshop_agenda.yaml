@@ -1,0 +1,17 @@
+# Template: workshop / multi-topic meeting agenda
+mode: workshop
+channel: any
+template: |
+  Workshop: {{topic}}
+
+  Duration: {{duration}}
+  Participants: {{participants}}
+
+  Agenda:
+  {{agenda_items}}
+
+  Preparation:
+  {{preparation_notes}}
+
+  Expected outcomes:
+  {{expected_outcomes}}

@@ -1,6 +1,7 @@
-"""Praxis core subsystem — agent, prompt builder, session, sufficiency."""
+"""Praxis core — agent, prompt, session, sufficiency, elicitation."""
 
 from praxis.core.agent import Agent
+from praxis.core.elicitation import ElicitationDraft, ElicitationMode, plan_elicitations
 from praxis.core.models import AgentResponse, StreamEvent
 from praxis.core.prompt import build_system_prompt
 from praxis.core.session import (
@@ -23,6 +24,8 @@ from praxis.core.sufficiency_helpers import list_template_kinds, load_template
 __all__ = [
     "Agent",
     "AgentResponse",
+    "ElicitationDraft",
+    "ElicitationMode",
     "InfoNeed",
     "InfoNeedStatus",
     "StreamEvent",
@@ -37,5 +40,6 @@ __all__ = [
     "load_session_messages",
     "load_template",
     "persist_message",
+    "plan_elicitations",
     "run_sufficiency_gate",
 ]

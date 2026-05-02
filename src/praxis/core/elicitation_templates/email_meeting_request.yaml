@@ -1,0 +1,19 @@
+# Template: email meeting request
+mode: meeting_request
+channel: email
+template: |
+  Subject: Meeting request — {{topic}}
+
+  Hi {{recipient_name}},
+
+  I'd like to schedule a brief meeting (30 min) to discuss {{context}}.
+
+  Topics to cover:
+  {{topics_list}}
+
+  These are important because {{rationale}}.
+
+  Would {{suggested_time}} work for you?
+
+  Thanks,
+  {{sender_name}}

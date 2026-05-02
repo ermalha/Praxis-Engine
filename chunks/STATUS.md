@@ -20,7 +20,7 @@ chunk by checking the box.
 ## Phase 3 — Praxis Distinctives
 
 - [x] **09 — Sufficiency Gate** (`chunks/09-sufficiency-gate.md`)
-- [ ] **10 — Elicitation Planner** (`chunks/10-elicitation-planner.md`)
+- [x] **10 — Elicitation Planner** (`chunks/10-elicitation-planner.md`)
 - [ ] **11 — Human Work-Queue** (`chunks/11-work-queue.md`)
 - [ ] **12 — Wake Cycle / Orchestrator** (`chunks/12-wake-cycle.md`) — **Praxis-distinctive milestone**
 

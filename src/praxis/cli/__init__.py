@@ -10,6 +10,7 @@ from .chat_cmd import chat
 from .check_cmd import check
 from .config_cmd import config_app
 from .doctor_cmd import doctor_app
+from .elicit_cmd import elicit
 from .engagement_cmd import engagement_app
 from .init_cmd import init
 from .profile import profile_app
@@ -40,6 +41,7 @@ app.command("init")(init)
 app.command("ask")(ask)
 app.command("chat")(chat)
 app.command("check")(check)
+app.command("elicit")(elicit)
 app.add_typer(profile_app)
 app.add_typer(config_app)
 app.add_typer(audit_app)

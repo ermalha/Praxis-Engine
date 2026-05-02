@@ -227,3 +227,91 @@ def sufficiency_check(
         content="\n".join(lines),
         data=report.model_dump(mode="json"),
     )
+
+
+@tool(
+    name="plan_elicitations_for_report",
+    description=(
+        "Plan elicitation drafts from a sufficiency report. "
+        "Produces targeted messages to fill information gaps."
+    ),
+    toolset="meta",
+)
+def plan_elicitations_for_report(
+    ctx: ToolContext,
+    sufficiency_report_id: str,
+    max_drafts: int = 5,
+) -> ToolResult:
+    """Plan elicitations from a persisted sufficiency report."""
+    if ctx.engagement_path is None:
+        raise ToolError("No engagement active", tool="plan_elicitations_for_report")
+
+    import json as _json
+
+    from praxis.config.loader import resolve_model_config
+    from praxis.core.elicitation import plan_elicitations
+    from praxis.core.sufficiency import SufficiencyReport
+    from praxis.transport.factory import make_transport
+
+    # Load the report from disk
+    reports_dir = ctx.engagement_path / ".praxis" / "state" / "sufficiency-reports"
+    report_path = reports_dir / f"{sufficiency_report_id}.json"
+    if not report_path.is_file():
+        # Try matching by prefix
+        matches = list(reports_dir.glob(f"{sufficiency_report_id}*.json"))
+        if len(matches) == 1:
+            report_path = matches[0]
+        elif not matches:
+            return ToolResult(
+                content=f"Report {sufficiency_report_id!r} not found.",
+                data={"error": "not_found"},
+            )
+        else:
+            return ToolResult(
+                content=f"Ambiguous ID: {len(matches)} matches.",
+                data={"error": "ambiguous"},
+            )
+
+    report_data = _json.loads(report_path.read_text(encoding="utf-8"))
+    report = SufficiencyReport.model_validate(report_data)
+
+    # Resolve transport
+    model_alias = ctx.profile.sufficiency_gate_model_alias
+    try:
+        model_config = resolve_model_config(ctx.profile, ctx.engagement, model_alias)
+        transport = make_transport(model_config)
+        model = model_config.model
+    except Exception as exc:  # noqa: BLE001
+        raise ToolError(
+            "Cannot resolve model for elicitation planner",
+            tool="plan_elicitations_for_report",
+        ) from exc
+
+    drafts = plan_elicitations(
+        report,
+        transport=transport,
+        model=model,
+        engagement_path=ctx.engagement_path,
+        max_drafts=max_drafts,
+    )
+
+    if not drafts:
+        return ToolResult(
+            content="No elicitation drafts needed — no gaps found.",
+            data={"drafts": []},
+        )
+
+    # Format summary
+    lines = [f"Planned {len(drafts)} elicitation draft(s):", ""]
+    for i, d in enumerate(drafts, 1):
+        lines.append(
+            f"{i}. [{d.priority.upper()}] {d.mode} → {d.target_stakeholder_name} via {d.channel}"
+        )
+        lines.append(f"   Needs: {', '.join(d.related_info_needs[:3])}")
+        if d.drafted_subject:
+            lines.append(f"   Subject: {d.drafted_subject}")
+
+    return ToolResult(
+        content="\n".join(lines),
+        data={"drafts": [d.model_dump(mode="json") for d in drafts]},
+    )

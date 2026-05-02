@@ -1,0 +1,17 @@
+# Template: email document request
+mode: document_request
+channel: email
+template: |
+  Subject: Document request — {{document_type}}
+
+  Hi {{recipient_name}},
+
+  For {{context}}, I need access to {{document_description}}.
+
+  Specifically, I'm looking for:
+  {{specific_needs}}
+
+  If you could share this by {{deadline}}, that would help keep us on track.
+
+  Thanks,
+  {{sender_name}}
