@@ -12,7 +12,7 @@ chunk by checking the box.
 
 ## Phase 2 — Agent Core
 
-- [ ] **05 — Tool Registry & Execution** (`chunks/05-tools.md`)
+- [x] **05 — Tool Registry & Execution** (`chunks/05-tools.md`)
 - [ ] **06 — Skill System** (`chunks/06-skills.md`)
 - [ ] **07 — Engagement Model API** (`chunks/07-engagement-model.md`)
 - [ ] **08 — Conversation Loop** (`chunks/08-conversation-loop.md`) — **Mini-Hermes milestone**

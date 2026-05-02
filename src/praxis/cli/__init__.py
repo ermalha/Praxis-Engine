@@ -10,6 +10,7 @@ from .config_cmd import config_app
 from .doctor_cmd import doctor_app
 from .init_cmd import init
 from .profile import profile_app
+from .tool_cmd import tool_app
 
 app = typer.Typer(
     name="praxis",
@@ -36,3 +37,4 @@ app.add_typer(profile_app)
 app.add_typer(config_app)
 app.add_typer(audit_app)
 app.add_typer(doctor_app)
+app.add_typer(tool_app)
