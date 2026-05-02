@@ -132,6 +132,8 @@ class ProfileConfig(BaseModel):
     display_name: str | None = None
     model_aliases: dict[str, ModelConfig] = {}
     default_model_alias: str = "default"
+    enforce_sufficiency_gate: bool = True
+    sufficiency_gate_model_alias: str | None = None
 
 
 class EngagementConfig(BaseModel):

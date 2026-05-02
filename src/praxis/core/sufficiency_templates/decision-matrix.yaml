@@ -1,0 +1,14 @@
+# Sufficiency template: decision-matrix
+# Pre-populated information needs for producing a decision matrix.
+artifact_kind: decision-matrix
+information_needs:
+  - need: "Options — the set of alternatives being compared"
+    blocker: true
+  - need: "Evaluation criteria — the dimensions used to score options"
+    blocker: true
+  - need: "Criteria weights — relative importance of each criterion"
+    blocker: false
+  - need: "Evaluator(s) — who provides the scoring or assessment?"
+    blocker: false
+  - need: "Decision authority — who has final sign-off?"
+    blocker: true

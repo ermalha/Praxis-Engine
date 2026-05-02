@@ -7,6 +7,7 @@ from praxis import __version__
 from .ask_cmd import ask
 from .audit_cmd import audit_app
 from .chat_cmd import chat
+from .check_cmd import check
 from .config_cmd import config_app
 from .doctor_cmd import doctor_app
 from .engagement_cmd import engagement_app
@@ -38,6 +39,7 @@ def version() -> None:
 app.command("init")(init)
 app.command("ask")(ask)
 app.command("chat")(chat)
+app.command("check")(check)
 app.add_typer(profile_app)
 app.add_typer(config_app)
 app.add_typer(audit_app)

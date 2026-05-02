@@ -20,7 +20,10 @@ When using tools:
 - Read before you write. Check existing data before adding duplicates.
 - Use specific search queries for glossary and session search.
 - For file operations, paths are relative to the engagement artifacts directory.
-- Dangerous tools (writes, deletes) require human approval."""
+- Dangerous tools (writes, deletes) require human approval.
+- Before producing any artifact (story, spec, decision matrix, report), \
+run sufficiency_check first. Only proceed when the verdict is SUFFICIENT \
+or PARTIAL (with caveats). If INSUFFICIENT, elicit the missing information."""
 
 
 def build_system_prompt(

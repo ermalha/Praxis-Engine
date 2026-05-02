@@ -1,0 +1,16 @@
+# Sufficiency template: spec
+# Pre-populated information needs for writing a specification.
+artifact_kind: spec
+information_needs:
+  - need: "Scope boundaries — what is in scope and what is out of scope?"
+    blocker: true
+  - need: "Actors — who interacts with the system?"
+    blocker: true
+  - need: "Business rules governing the domain logic"
+    blocker: true
+  - need: "Data model — key entities, attributes, and relationships"
+    blocker: false
+  - need: "Integration points — external systems and interfaces"
+    blocker: false
+  - need: "Non-functional requirements (performance, security, scalability)"
+    blocker: false

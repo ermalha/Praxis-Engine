@@ -1,0 +1,12 @@
+# Sufficiency template: risk-register-entry
+# Pre-populated information needs for a risk register entry.
+artifact_kind: risk-register-entry
+information_needs:
+  - need: "Likelihood basis — evidence or reasoning for the probability rating"
+    blocker: true
+  - need: "Impact basis — what would be affected and how severely?"
+    blocker: true
+  - need: "Risk owner — who is accountable for monitoring and mitigation?"
+    blocker: true
+  - need: "Mitigation feasibility — are there practical options to reduce the risk?"
+    blocker: false

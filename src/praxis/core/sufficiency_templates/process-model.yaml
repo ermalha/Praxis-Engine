@@ -1,0 +1,14 @@
+# Sufficiency template: process-model
+# Pre-populated information needs for documenting a process.
+artifact_kind: process-model
+information_needs:
+  - need: "Start and end events — what triggers the process and what ends it?"
+    blocker: true
+  - need: "Actors — who performs each step?"
+    blocker: true
+  - need: "Decision points — branching conditions and their outcomes"
+    blocker: true
+  - need: "Exception flows — what happens when something goes wrong?"
+    blocker: false
+  - need: "System interactions — which systems are involved at each step?"
+    blocker: false

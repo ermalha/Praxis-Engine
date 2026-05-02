@@ -1,0 +1,16 @@
+# Sufficiency template: user-story
+# Pre-populated information needs for writing a user story.
+artifact_kind: user-story
+information_needs:
+  - need: "Actor identity — who is the user or persona performing the action?"
+    blocker: true
+  - need: "Action goal — what does the actor want to accomplish?"
+    blocker: true
+  - need: "Value / why — what business or user value does this deliver?"
+    blocker: true
+  - need: "Acceptance criteria — concrete conditions that define done"
+    blocker: true
+  - need: "Business rules and constraints governing the behaviour"
+    blocker: false
+  - need: "Non-functional requirements (performance, security, accessibility)"
+    blocker: false

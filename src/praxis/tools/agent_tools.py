@@ -1,4 +1,4 @@
-"""Built-in agent tools — session search, file I/O, web fetch, time."""
+"""Built-in agent tools — session search, file I/O, web fetch, time, sufficiency."""
 
 from __future__ import annotations
 
@@ -154,4 +154,76 @@ def web_fetch(_ctx: ToolContext, url: str) -> ToolResult:
     return ToolResult(
         content=text,
         data={"url": url, "status": resp.status_code, "size": len(resp.text)},
+    )
+
+
+@tool(
+    name="sufficiency_check",
+    description=(
+        "Run a sufficiency gate check before producing an artifact. "
+        "Evaluates whether enough information is available."
+    ),
+    toolset="meta",
+)
+def sufficiency_check(
+    ctx: ToolContext,
+    artifact_kind: str,
+    artifact_target: str,
+    extra_context: str | None = None,
+) -> ToolResult:
+    """Evaluate information sufficiency for an artifact."""
+    if ctx.engagement_path is None:
+        raise ToolError("No engagement active", tool="sufficiency_check")
+
+    from praxis.config.loader import resolve_model_config
+    from praxis.core.sufficiency import run_sufficiency_gate
+    from praxis.transport.factory import make_transport
+
+    # Resolve model — prefer sufficiency_gate_model_alias if set
+    model_alias = ctx.profile.sufficiency_gate_model_alias
+    try:
+        model_config = resolve_model_config(ctx.profile, ctx.engagement, model_alias)
+        transport = make_transport(model_config)
+        model = model_config.model
+    except Exception as exc:  # noqa: BLE001
+        raise ToolError(
+            "Cannot resolve model for sufficiency gate",
+            tool="sufficiency_check",
+        ) from exc
+
+    report = run_sufficiency_gate(
+        artifact_kind,
+        artifact_target,
+        transport=transport,
+        model=model,
+        engagement_path=ctx.engagement_path,
+        extra_context=extra_context,
+    )
+
+    # Format human-readable summary
+    lines = [
+        f"Sufficiency Check: {report.artifact_kind}",
+        f"Target: {report.artifact_target}",
+        f"Verdict: {report.verdict.value.upper()}",
+        f"Action: {report.recommended_action}",
+        "",
+        "Information needs:",
+    ]
+    for need in report.information_needs:
+        marker = "x" if need.status == "known" else ("~" if need.status == "partial" else " ")
+        blocker_tag = " [BLOCKER]" if need.blocker else ""
+        lines.append(f"  [{marker}] {need.need}{blocker_tag}")
+        if need.have:
+            lines.append(f"      Have: {need.have}")
+        if need.missing:
+            lines.append(f"      Missing: {need.missing}")
+
+    if report.elicitation_targets:
+        lines.append(f"\nElicitation targets: {', '.join(report.elicitation_targets)}")
+
+    lines.append(f"\nReasoning: {report.reasoning}")
+
+    return ToolResult(
+        content="\n".join(lines),
+        data=report.model_dump(mode="json"),
     )
