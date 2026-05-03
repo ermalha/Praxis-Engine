@@ -87,6 +87,21 @@ class OpenQuestionsRepo:
         emit("question.opened", subject_id=qid, question=question)
         return q
 
+    def mark_asked(self, qid: str, *, asked_at: datetime | None = None) -> OpenQuestion:
+        """Mark a question as asked (transition from open to asked)."""
+        data = self.load()
+        now = asked_at or datetime.now(UTC)
+        for i, q in enumerate(data.questions):
+            if q.id == qid:
+                updated = q.model_copy(
+                    update={"status": "asked", "asked_at": now, "updated_at": now}
+                )
+                data.questions[i] = updated
+                self._save(data)
+                emit("question.asked", subject_id=qid)
+                return updated
+        raise EngagementError(f"Question {qid!r} not found", id=qid)
+
     def answer(self, qid: str, answer: str) -> OpenQuestion:
         """Record an answer for a question."""
         data = self.load()

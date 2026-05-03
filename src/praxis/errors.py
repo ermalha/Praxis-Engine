@@ -45,5 +45,9 @@ class SufficiencyError(PraxisError):
     """Sufficiency gate error."""
 
 
+class OrchestratorError(PraxisError):
+    """Orchestrator / wake-cycle error."""
+
+
 class AuditError(PraxisError):
     """Audit logging error."""

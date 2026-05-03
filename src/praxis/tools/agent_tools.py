@@ -1,4 +1,4 @@
-"""Built-in agent tools — session search, file I/O, web fetch, time, sufficiency."""
+"""Built-in agent tools — session search, file I/O, web fetch, time, sufficiency, wake."""
 
 from __future__ import annotations
 
@@ -314,4 +314,83 @@ def plan_elicitations_for_report(
     return ToolResult(
         content="\n".join(lines),
         data={"drafts": [d.model_dump(mode="json") for d in drafts]},
+    )
+
+
+@tool(
+    name="wake_status",
+    description="Read the most recent wake-cycle reports for the current engagement.",
+    toolset="meta",
+)
+def wake_status(ctx: ToolContext, count: int = 5) -> ToolResult:
+    """Return recent wake reports for self-inspection."""
+    if ctx.engagement_path is None:
+        raise ToolError("No engagement active", tool="wake_status")
+
+    import json as _json
+
+    reports_dir = ctx.engagement_path / ".praxis" / "state" / "wake-reports"
+    if not reports_dir.exists():
+        return ToolResult(content="No wake reports yet.", data={"reports": []})
+
+    files = sorted(reports_dir.glob("*.json"), reverse=True)[:count]
+    reports = []
+    for f in files:
+        try:
+            reports.append(_json.loads(f.read_text(encoding="utf-8")))
+        except (OSError, _json.JSONDecodeError):
+            continue
+
+    if not reports:
+        return ToolResult(content="No wake reports found.", data={"reports": []})
+
+    lines = [f"Last {len(reports)} wake report(s):", ""]
+    for r in reports:
+        trigger = r.get("trigger", "?")
+        executed = r.get("tasks_executed", [])
+        created = r.get("workitems_created", [])
+        started = r.get("started_at", "?")
+        lines.append(f"- {started} [{trigger}]: {len(executed)} tasks, {len(created)} items")
+
+    return ToolResult(content="\n".join(lines), data={"reports": reports})
+
+
+@tool(
+    name="propose_followup",
+    description="Schedule an AGENT_FOLLOW_UP work-item for later execution.",
+    toolset="meta",
+)
+def propose_followup(
+    ctx: ToolContext,
+    title: str,
+    description: str,
+    priority: str = "medium",
+) -> ToolResult:
+    """Create an agent follow-up work-item in the queue."""
+    if ctx.engagement_path is None:
+        raise ToolError("No engagement active", tool="propose_followup")
+
+    from praxis.workqueue import WorkItemPriority, WorkItemType, WorkQueueRepo
+
+    priority_map = {
+        "critical": WorkItemPriority.CRITICAL,
+        "high": WorkItemPriority.HIGH,
+        "medium": WorkItemPriority.MEDIUM,
+        "low": WorkItemPriority.LOW,
+    }
+    pri = priority_map.get(priority.lower(), WorkItemPriority.MEDIUM)
+
+    repo = WorkQueueRepo(ctx.engagement_path)
+    item = repo.enqueue(
+        type=WorkItemType.AGENT_FOLLOW_UP,
+        assignee="agent",
+        title=title,
+        description=description,
+        priority=pri,
+        rationale="Proposed by agent via propose_followup tool",
+    )
+
+    return ToolResult(
+        content=f"Created follow-up: {item.id} — {item.title}",
+        data={"id": item.id, "title": item.title, "priority": pri.value},
     )

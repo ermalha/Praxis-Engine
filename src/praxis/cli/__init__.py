@@ -15,6 +15,7 @@ from .engagement_cmd import engagement_app
 from .init_cmd import init
 from .profile import profile_app
 from .queue_cmd import queue_app
+from .run_cmd import plan_app, run, status, wake
 from .session_cmd import session_app
 from .skill_cmd import skill_app
 from .tool_cmd import tool_app
@@ -52,3 +53,7 @@ app.add_typer(queue_app)
 app.add_typer(session_app)
 app.add_typer(skill_app)
 app.add_typer(tool_app)
+app.command("run")(run)
+app.command("wake")(wake)
+app.command("status")(status)
+app.add_typer(plan_app)
