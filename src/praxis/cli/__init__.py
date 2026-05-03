@@ -6,13 +6,16 @@ from praxis import __version__
 
 from .ask_cmd import ask
 from .audit_cmd import audit_app
+from .browser_cmd import browser_app
 from .chat_cmd import chat
 from .check_cmd import check
 from .config_cmd import config_app
 from .doctor_cmd import doctor_app
 from .elicit_cmd import elicit
+from .email_cmd import email_app
 from .engagement_cmd import engagement_app
 from .init_cmd import init
+from .integrations_cmd import integrations_app
 from .profile import profile_app
 from .queue_cmd import queue_app
 from .run_cmd import plan_app, run, status, wake
@@ -20,6 +23,7 @@ from .session_cmd import session_app
 from .skill_cmd import skill_app
 from .tool_cmd import tool_app
 from .tui_cmd import tui
+from .webhook_cmd import webhook_app
 
 app = typer.Typer(
     name="praxis",
@@ -59,3 +63,7 @@ app.command("wake")(wake)
 app.command("status")(status)
 app.command("tui")(tui)
 app.add_typer(plan_app)
+app.add_typer(integrations_app)
+app.add_typer(browser_app)
+app.add_typer(webhook_app)
+app.add_typer(email_app)

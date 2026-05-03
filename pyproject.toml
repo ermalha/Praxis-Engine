@@ -22,7 +22,11 @@ dependencies = [
 anthropic = ["anthropic>=0.34"]
 openai = ["openai>=1.40"]
 tui = ["textual>=0.79"]
-all = ["praxis-ba[anthropic,openai,tui]"]
+jira = ["atlassian-python-api>=3.41"]
+confluence = ["atlassian-python-api>=3.41"]
+email = ["imap-tools>=1.7"]
+webhook = ["fastapi>=0.111", "uvicorn>=0.30"]
+all = ["praxis-ba[anthropic,openai,tui,jira,confluence,email,webhook]"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.23",

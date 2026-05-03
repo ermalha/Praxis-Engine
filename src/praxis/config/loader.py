@@ -159,6 +159,21 @@ def resolve_model_config(
     return profile.model_aliases[alias]
 
 
+def save_engagement_config(path: Path, config: EngagementConfig) -> Path:
+    """Persist engagement config to disk.
+
+    Args:
+        path: The engagement root directory.
+        config: The config to write.
+
+    Returns:
+        The path the config was written to.
+    """
+    config_path = path / ".praxis" / "config.yaml"
+    _write_yaml_atomic(config_path, config.model_dump(mode="json"))
+    return config_path
+
+
 def save_global_config(config: GlobalConfig, home: Path | None = None) -> Path:
     """Persist global config to disk.
 

@@ -51,3 +51,7 @@ class OrchestratorError(PraxisError):
 
 class AuditError(PraxisError):
     """Audit logging error."""
+
+
+class IntegrationError(PraxisError):
+    """Integration subsystem error."""
