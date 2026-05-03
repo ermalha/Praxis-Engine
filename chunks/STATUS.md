@@ -26,7 +26,7 @@ chunk by checking the box.
 
 ## Phase 4 — Real-World Surface
 
-- [ ] **13 — TUI** (`chunks/13-tui.md`)
+- [x] **13 — TUI** (`chunks/13-tui.md`)
 - [ ] **14 — Integrations Bundle** (`chunks/14-integrations.md`)
 - [ ] **15 — Starter Skill Library** (`chunks/15-skills-library.md`)
 

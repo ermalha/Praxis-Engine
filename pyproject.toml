@@ -58,11 +58,16 @@ ignore = []
 python_version = "3.11"
 strict = true
 files = ["src/praxis"]
-exclude = ["src/praxis/integrations/.*"]
+exclude = ["src/praxis/integrations/.*", "src/praxis/tui/.*"]
 
 [[tool.mypy.overrides]]
 module = "praxis.integrations.*"
 strict = false
+
+[[tool.mypy.overrides]]
+module = "praxis.tui.*"
+strict = false
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

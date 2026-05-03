@@ -19,6 +19,7 @@ from .run_cmd import plan_app, run, status, wake
 from .session_cmd import session_app
 from .skill_cmd import skill_app
 from .tool_cmd import tool_app
+from .tui_cmd import tui
 
 app = typer.Typer(
     name="praxis",
@@ -56,4 +57,5 @@ app.add_typer(tool_app)
 app.command("run")(run)
 app.command("wake")(wake)
 app.command("status")(status)
+app.command("tui")(tui)
 app.add_typer(plan_app)
