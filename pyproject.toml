@@ -47,6 +47,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/praxis"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "praxis/_bundled_skills"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

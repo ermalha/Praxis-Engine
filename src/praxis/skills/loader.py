@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.resources
 import logging
 from pathlib import Path
 from typing import Literal
@@ -117,10 +118,20 @@ def _discover_skills(
 
 
 def _bundled_skills_root() -> Path:
-    """Return the path to the bundled skills directory (repo root ``skills/``)."""
-    # The bundled skills live at the repo root, two levels up from this file
-    # This file: src/praxis/skills/loader.py
-    # Repo root: ../../../
+    """Return the path to the bundled skills directory.
+
+    Tries ``importlib.resources`` first (works when installed from a wheel),
+    falls back to the repo-root ``skills/`` directory for dev/editable installs.
+    """
+    try:
+        ref = importlib.resources.files("praxis") / "_bundled_skills"
+        pkg_path = Path(str(ref))
+        if pkg_path.is_dir():
+            return pkg_path
+    except (TypeError, ModuleNotFoundError):
+        pass
+
+    # Dev / editable mode: skills/ lives at the repo root
     return Path(__file__).resolve().parent.parent.parent.parent / "skills"
 
 
@@ -170,3 +181,13 @@ def load_skills(
             merged[name] = skill
 
     return list(merged.values())
+
+
+def load_bundled_skills() -> list[Skill]:
+    """Load only the bundled starter skills.
+
+    Convenience wrapper used by acceptance tests and the ``praxis skill list``
+    CLI command to verify that all shipped skills parse correctly.
+    """
+    root = _bundled_skills_root()
+    return list(_discover_skills(root, "bundled").values())

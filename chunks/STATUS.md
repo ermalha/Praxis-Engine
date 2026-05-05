@@ -28,7 +28,7 @@ chunk by checking the box.
 
 - [x] **13 — TUI** (`chunks/13-tui.md`)
 - [x] **14 — Integrations Bundle** (`chunks/14-integrations.md`)
-- [ ] **15 — Starter Skill Library** (`chunks/15-skills-library.md`)
+- [x] **15 — Starter Skill Library** (`chunks/15-skills-library.md`)
 
 ---
 

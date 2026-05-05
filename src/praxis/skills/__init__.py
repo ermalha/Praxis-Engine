@@ -2,7 +2,7 @@
 
 # Auto-register skill tools when the package is imported
 import praxis.skills.tools as _tools  # noqa: F401
-from praxis.skills.loader import load_skills, parse_skill_md
+from praxis.skills.loader import load_bundled_skills, load_skills, parse_skill_md
 from praxis.skills.manage import create_skill, delete_skill, patch_skill, promote_skill
 from praxis.skills.models import Skill, SkillFrontmatter
 from praxis.skills.registry import SkillRegistry
@@ -13,6 +13,7 @@ __all__ = [
     "SkillRegistry",
     "create_skill",
     "delete_skill",
+    "load_bundled_skills",
     "load_skills",
     "parse_skill_md",
     "patch_skill",
