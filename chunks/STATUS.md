@@ -60,3 +60,5 @@ If you ever need to ship something before the full 15 chunks:
 
 All 15 chunks complete + a `tests/e2e/test_full_engagement.py` that exercises a
 realistic week-long engagement scenario end-to-end against mocked LLMs.
+
+- [x] **E2E test** — `tests/e2e/test_full_engagement.py` (14 tests, all passing)
