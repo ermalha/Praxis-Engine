@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import date
 from pathlib import Path
@@ -10,8 +11,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from praxis.audit.context import set_audit_context
 from praxis.cli.errors import handle_praxis_errors
 from praxis.config.engagement import find_engagement
+from praxis.config.loader import load_engagement_config
 from praxis.engagement import (
     DecisionRepo,
     GlossaryRepo,
@@ -41,6 +44,12 @@ def _resolve_engagement(engagement: str | None) -> Path:
         err_console.print("[red]No engagement found. Use --engagement or cd into one.[/red]")
         raise typer.Exit(1)
     return found
+
+
+def _audit_ctx(eng: Path) -> contextlib.AbstractContextManager[object]:
+    """Return an audit context manager scoped to *eng*."""
+    config = load_engagement_config(eng)
+    return set_audit_context(engagement=config.name, engagement_path=eng)
 
 
 # ---------------------------------------------------------------------------
@@ -134,14 +143,15 @@ def glossary_add(
 ) -> None:
     """Add a glossary term."""
     eng = _resolve_engagement(engagement)
-    repo = GlossaryRepo(eng)
-    syn = [s.strip() for s in synonyms.split(",")] if synonyms else None
-    try:
-        t = repo.add_term(term, definition, synonyms=syn)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Added term {t.term!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = GlossaryRepo(eng)
+        syn = [s.strip() for s in synonyms.split(",")] if synonyms else None
+        try:
+            t = repo.add_term(term, definition, synonyms=syn)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Added term {t.term!r}.[/green]")
 
 
 @glossary_app.command("remove")
@@ -152,13 +162,14 @@ def glossary_remove(
 ) -> None:
     """Remove a glossary term."""
     eng = _resolve_engagement(engagement)
-    repo = GlossaryRepo(eng)
-    try:
-        repo.remove_term(term)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Removed term {term!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = GlossaryRepo(eng)
+        try:
+            repo.remove_term(term)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Removed term {term!r}.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -231,10 +242,11 @@ def stakeholder_add(
 ) -> None:
     """Add a stakeholder."""
     eng = _resolve_engagement(engagement)
-    repo = StakeholderRepo(eng)
-    exp = [e.strip() for e in expertise.split(",")] if expertise else None
-    s = repo.add(name, role, expertise=exp)
-    console.print(f"[green]Added stakeholder {s.name!r} [{s.id}].[/green]")
+    with _audit_ctx(eng):
+        repo = StakeholderRepo(eng)
+        exp = [e.strip() for e in expertise.split(",")] if expertise else None
+        s = repo.add(name, role, expertise=exp)
+        console.print(f"[green]Added stakeholder {s.name!r} [{s.id}].[/green]")
 
 
 @stakeholder_app.command("update")
@@ -246,19 +258,20 @@ def stakeholder_update(
 ) -> None:
     """Update a stakeholder."""
     eng = _resolve_engagement(engagement)
-    repo = StakeholderRepo(eng)
-    kwargs: dict[str, object] = {}
-    if role is not None:
-        kwargs["role"] = role
-    if not kwargs:
-        err_console.print("[red]No fields to update.[/red]")
-        raise typer.Exit(1)
-    try:
-        s = repo.update(sid, **kwargs)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Updated stakeholder {s.name!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = StakeholderRepo(eng)
+        kwargs: dict[str, object] = {}
+        if role is not None:
+            kwargs["role"] = role
+        if not kwargs:
+            err_console.print("[red]No fields to update.[/red]")
+            raise typer.Exit(1)
+        try:
+            s = repo.update(sid, **kwargs)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Updated stakeholder {s.name!r}.[/green]")
 
 
 @stakeholder_app.command("remove")
@@ -269,13 +282,14 @@ def stakeholder_remove(
 ) -> None:
     """Remove a stakeholder."""
     eng = _resolve_engagement(engagement)
-    repo = StakeholderRepo(eng)
-    try:
-        repo.remove(sid)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Removed stakeholder {sid!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = StakeholderRepo(eng)
+        try:
+            repo.remove(sid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Removed stakeholder {sid!r}.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -345,13 +359,14 @@ def decision_new(
 ) -> None:
     """Create a new decision record."""
     eng = _resolve_engagement(engagement)
-    repo = DecisionRepo(eng)
-    try:
-        d = repo.create(title, context, decision, consequences)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Created decision {d.id}.[/green]")
+    with _audit_ctx(eng):
+        repo = DecisionRepo(eng)
+        try:
+            d = repo.create(title, context, decision, consequences)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Created decision {d.id}.[/green]")
 
 
 @decision_app.command("supersede")
@@ -363,13 +378,14 @@ def decision_supersede(
 ) -> None:
     """Mark a decision as superseded."""
     eng = _resolve_engagement(engagement)
-    repo = DecisionRepo(eng)
-    try:
-        d = repo.supersede(did, by)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Decision {d.id} superseded by {by}.[/green]")
+    with _audit_ctx(eng):
+        repo = DecisionRepo(eng)
+        try:
+            d = repo.supersede(did, by)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Decision {d.id} superseded by {by}.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -422,13 +438,14 @@ def question_open(
 ) -> None:
     """Open a new tracked question."""
     eng = _resolve_engagement(engagement)
-    repo = OpenQuestionsRepo(eng)
-    try:
-        q = repo.open(question, why, priority=priority)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Opened question {q.id}.[/green]")
+    with _audit_ctx(eng):
+        repo = OpenQuestionsRepo(eng)
+        try:
+            q = repo.open(question, why, priority=priority)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Opened question {q.id}.[/green]")
 
 
 @question_app.command("answer")
@@ -440,13 +457,14 @@ def question_answer(
 ) -> None:
     """Answer a question."""
     eng = _resolve_engagement(engagement)
-    repo = OpenQuestionsRepo(eng)
-    try:
-        q = repo.answer(qid, answer)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Answered question {q.id}.[/green]")
+    with _audit_ctx(eng):
+        repo = OpenQuestionsRepo(eng)
+        try:
+            q = repo.answer(qid, answer)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Answered question {q.id}.[/green]")
 
 
 @question_app.command("withdraw")
@@ -457,13 +475,14 @@ def question_withdraw(
 ) -> None:
     """Withdraw a question."""
     eng = _resolve_engagement(engagement)
-    repo = OpenQuestionsRepo(eng)
-    try:
-        q = repo.withdraw(qid)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Withdrew question {q.id}.[/green]")
+    with _audit_ctx(eng):
+        repo = OpenQuestionsRepo(eng)
+        try:
+            q = repo.withdraw(qid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Withdrew question {q.id}.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -515,9 +534,10 @@ def system_add(
 ) -> None:
     """Add a system."""
     eng = _resolve_engagement(engagement)
-    repo = SystemLandscapeRepo(eng)
-    s = repo.add(name, kind, description=description)
-    console.print(f"[green]Added system {s.name!r} [{s.id}].[/green]")
+    with _audit_ctx(eng):
+        repo = SystemLandscapeRepo(eng)
+        s = repo.add(name, kind, description=description)
+        console.print(f"[green]Added system {s.name!r} [{s.id}].[/green]")
 
 
 @system_app.command("show")
@@ -591,9 +611,10 @@ def risk_add(
 ) -> None:
     """Add a risk."""
     eng = _resolve_engagement(engagement)
-    repo = RiskRepo(eng)
-    r = repo.add(title, description, likelihood, impact, mitigation=mitigation)
-    console.print(f"[green]Added risk {r.title!r} [{r.id}].[/green]")
+    with _audit_ctx(eng):
+        repo = RiskRepo(eng)
+        r = repo.add(title, description, likelihood, impact, mitigation=mitigation)
+        console.print(f"[green]Added risk {r.title!r} [{r.id}].[/green]")
 
 
 @risk_app.command("update")
@@ -606,21 +627,22 @@ def risk_update(
 ) -> None:
     """Update a risk."""
     eng = _resolve_engagement(engagement)
-    repo = RiskRepo(eng)
-    kwargs: dict[str, object] = {}
-    if status is not None:
-        kwargs["status"] = status
-    if mitigation is not None:
-        kwargs["mitigation"] = mitigation
-    if not kwargs:
-        err_console.print("[red]No fields to update.[/red]")
-        raise typer.Exit(1)
-    try:
-        r = repo.update(rid, **kwargs)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Updated risk {r.title!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = RiskRepo(eng)
+        kwargs: dict[str, object] = {}
+        if status is not None:
+            kwargs["status"] = status
+        if mitigation is not None:
+            kwargs["mitigation"] = mitigation
+        if not kwargs:
+            err_console.print("[red]No fields to update.[/red]")
+            raise typer.Exit(1)
+        try:
+            r = repo.update(rid, **kwargs)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Updated risk {r.title!r}.[/green]")
 
 
 @risk_app.command("close")
@@ -631,13 +653,14 @@ def risk_close(
 ) -> None:
     """Close a risk."""
     eng = _resolve_engagement(engagement)
-    repo = RiskRepo(eng)
-    try:
-        r = repo.close(rid)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Closed risk {r.title!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = RiskRepo(eng)
+        try:
+            r = repo.close(rid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Closed risk {r.title!r}.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -689,10 +712,11 @@ def timeline_add(
 ) -> None:
     """Add a milestone."""
     eng = _resolve_engagement(engagement)
-    repo = TimelineRepo(eng)
-    d = date.fromisoformat(target_date)
-    m = repo.add(title, d, notes=notes)
-    console.print(f"[green]Added milestone {m.title!r} [{m.id}].[/green]")
+    with _audit_ctx(eng):
+        repo = TimelineRepo(eng)
+        d = date.fromisoformat(target_date)
+        m = repo.add(title, d, notes=notes)
+        console.print(f"[green]Added milestone {m.title!r} [{m.id}].[/green]")
 
 
 @timeline_app.command("update")
@@ -705,18 +729,19 @@ def timeline_update(
 ) -> None:
     """Update a milestone."""
     eng = _resolve_engagement(engagement)
-    repo = TimelineRepo(eng)
-    kwargs: dict[str, object] = {}
-    if status is not None:
-        kwargs["status"] = status
-    if target_date is not None:
-        kwargs["target_date"] = date.fromisoformat(target_date)
-    if not kwargs:
-        err_console.print("[red]No fields to update.[/red]")
-        raise typer.Exit(1)
-    try:
-        m = repo.update(mid, **kwargs)
-    except EngagementError as exc:
-        err_console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    console.print(f"[green]Updated milestone {m.title!r}.[/green]")
+    with _audit_ctx(eng):
+        repo = TimelineRepo(eng)
+        kwargs: dict[str, object] = {}
+        if status is not None:
+            kwargs["status"] = status
+        if target_date is not None:
+            kwargs["target_date"] = date.fromisoformat(target_date)
+        if not kwargs:
+            err_console.print("[red]No fields to update.[/red]")
+            raise typer.Exit(1)
+        try:
+            m = repo.update(mid, **kwargs)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Updated milestone {m.title!r}.[/green]")
