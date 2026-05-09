@@ -10,6 +10,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from praxis.cli.errors import handle_praxis_errors
 from praxis.config.engagement import find_engagement
 from praxis.engagement import (
     DecisionRepo,
@@ -57,6 +58,7 @@ engagement_app.add_typer(glossary_app)
 
 
 @glossary_app.command("list")
+@handle_praxis_errors
 def glossary_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     json_output: bool = typer.Option(False, "--json"),
@@ -86,6 +88,7 @@ def glossary_list(
 
 
 @glossary_app.command("get")
+@handle_praxis_errors
 def glossary_get(
     term: str = typer.Argument(..., help="Term to look up."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -105,6 +108,7 @@ def glossary_get(
 
 
 @glossary_app.command("search")
+@handle_praxis_errors
 def glossary_search(
     query: str = typer.Argument(..., help="Search query."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -121,6 +125,7 @@ def glossary_search(
 
 
 @glossary_app.command("add")
+@handle_praxis_errors
 def glossary_add(
     term: str = typer.Argument(..., help="Term name."),
     definition: str = typer.Argument(..., help="Term definition."),
@@ -140,6 +145,7 @@ def glossary_add(
 
 
 @glossary_app.command("remove")
+@handle_praxis_errors
 def glossary_remove(
     term: str = typer.Argument(..., help="Term to remove."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -164,6 +170,7 @@ engagement_app.add_typer(stakeholder_app)
 
 
 @stakeholder_app.command("list")
+@handle_praxis_errors
 def stakeholder_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     json_output: bool = typer.Option(False, "--json"),
@@ -195,6 +202,7 @@ def stakeholder_list(
 
 
 @stakeholder_app.command("get")
+@handle_praxis_errors
 def stakeholder_get(
     sid: str = typer.Argument(..., help="Stakeholder ID."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -214,6 +222,7 @@ def stakeholder_get(
 
 
 @stakeholder_app.command("add")
+@handle_praxis_errors
 def stakeholder_add(
     name: str = typer.Argument(..., help="Stakeholder name."),
     role: str = typer.Argument(..., help="Stakeholder role."),
@@ -229,6 +238,7 @@ def stakeholder_add(
 
 
 @stakeholder_app.command("update")
+@handle_praxis_errors
 def stakeholder_update(
     sid: str = typer.Argument(..., help="Stakeholder ID."),
     role: str | None = typer.Option(None, "--role"),
@@ -252,6 +262,7 @@ def stakeholder_update(
 
 
 @stakeholder_app.command("remove")
+@handle_praxis_errors
 def stakeholder_remove(
     sid: str = typer.Argument(..., help="Stakeholder ID."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -276,6 +287,7 @@ engagement_app.add_typer(decision_app)
 
 
 @decision_app.command("list")
+@handle_praxis_errors
 def decision_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     json_output: bool = typer.Option(False, "--json"),
@@ -305,6 +317,7 @@ def decision_list(
 
 
 @decision_app.command("show")
+@handle_praxis_errors
 def decision_show(
     did: str = typer.Argument(..., help="Decision ID."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -322,6 +335,7 @@ def decision_show(
 
 
 @decision_app.command("new")
+@handle_praxis_errors
 def decision_new(
     title: str = typer.Argument(..., help="Decision title."),
     context: str = typer.Option(..., "--context", help="Decision context."),
@@ -341,6 +355,7 @@ def decision_new(
 
 
 @decision_app.command("supersede")
+@handle_praxis_errors
 def decision_supersede(
     did: str = typer.Argument(..., help="Decision ID to supersede."),
     by: str = typer.Option(..., "--by", help="Superseding decision ID."),
@@ -366,6 +381,7 @@ engagement_app.add_typer(question_app)
 
 
 @question_app.command("list")
+@handle_praxis_errors
 def question_list(
     status: str | None = typer.Option(None, "--status", "-s"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -397,6 +413,7 @@ def question_list(
 
 
 @question_app.command("open")
+@handle_praxis_errors
 def question_open(
     question: str = typer.Argument(..., help="The question."),
     why: str = typer.Option(..., "--why", help="Why it matters."),
@@ -415,6 +432,7 @@ def question_open(
 
 
 @question_app.command("answer")
+@handle_praxis_errors
 def question_answer(
     qid: str = typer.Argument(..., help="Question ID."),
     answer: str = typer.Argument(..., help="The answer."),
@@ -432,6 +450,7 @@ def question_answer(
 
 
 @question_app.command("withdraw")
+@handle_praxis_errors
 def question_withdraw(
     qid: str = typer.Argument(..., help="Question ID."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -456,6 +475,7 @@ engagement_app.add_typer(system_app)
 
 
 @system_app.command("list")
+@handle_praxis_errors
 def system_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     json_output: bool = typer.Option(False, "--json"),
@@ -486,6 +506,7 @@ def system_list(
 
 
 @system_app.command("add")
+@handle_praxis_errors
 def system_add(
     name: str = typer.Argument(..., help="System name."),
     kind: str = typer.Argument(..., help="System kind (e.g. web app, API)."),
@@ -500,6 +521,7 @@ def system_add(
 
 
 @system_app.command("show")
+@handle_praxis_errors
 def system_show(
     sid: str = typer.Argument(..., help="System ID."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -526,6 +548,7 @@ engagement_app.add_typer(risk_app)
 
 
 @risk_app.command("list")
+@handle_praxis_errors
 def risk_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     json_output: bool = typer.Option(False, "--json"),
@@ -557,6 +580,7 @@ def risk_list(
 
 
 @risk_app.command("add")
+@handle_praxis_errors
 def risk_add(
     title: str = typer.Argument(..., help="Risk title."),
     description: str = typer.Argument(..., help="Risk description."),
@@ -573,6 +597,7 @@ def risk_add(
 
 
 @risk_app.command("update")
+@handle_praxis_errors
 def risk_update(
     rid: str = typer.Argument(..., help="Risk ID."),
     status: str | None = typer.Option(None, "--status"),
@@ -599,6 +624,7 @@ def risk_update(
 
 
 @risk_app.command("close")
+@handle_praxis_errors
 def risk_close(
     rid: str = typer.Argument(..., help="Risk ID."),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
@@ -623,6 +649,7 @@ engagement_app.add_typer(timeline_app)
 
 
 @timeline_app.command("list")
+@handle_praxis_errors
 def timeline_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     json_output: bool = typer.Option(False, "--json"),
@@ -653,6 +680,7 @@ def timeline_list(
 
 
 @timeline_app.command("add")
+@handle_praxis_errors
 def timeline_add(
     title: str = typer.Argument(..., help="Milestone title."),
     target_date: str = typer.Option(..., "--date", "-d", help="Target date (YYYY-MM-DD)."),
@@ -668,6 +696,7 @@ def timeline_add(
 
 
 @timeline_app.command("update")
+@handle_praxis_errors
 def timeline_update(
     mid: str = typer.Argument(..., help="Milestone ID."),
     status: str | None = typer.Option(None, "--status"),
