@@ -58,11 +58,14 @@ def config_show(
     if eng_path is not None:
         try:
             eng_cfg = load_engagement_config(eng_path)
-            result["engagement"] = eng_cfg.model_dump(mode="json")
+            data = eng_cfg.model_dump(mode="json")
+            data["active"] = True
+            data["path"] = str(eng_path)
+            result["engagement"] = data
         except ConfigError as exc:
             result["engagement"] = {"error": str(exc)}
     else:
-        result["engagement"] = None
+        result["engagement"] = {"active": False}
 
     if as_json:
         typer.echo(json.dumps(result, indent=2, default=str))
