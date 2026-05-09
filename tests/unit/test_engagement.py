@@ -59,7 +59,8 @@ class TestGlossary:
         repo = GlossaryRepo(eng)
         repo.add_term("invoice", "A request for payment")
         repo.add_term("credit note", "Reversal of an invoice", synonyms=["CN"])
-        assert len(repo.find("invoice")) == 1
+        # "invoice" matches both the term name and the credit note's definition
+        assert len(repo.find("invoice")) == 2
         assert len(repo.find("cn")) == 1  # searches synonyms
 
     def test_update(self, eng: Path) -> None:
@@ -89,6 +90,28 @@ class TestGlossary:
         repo = GlossaryRepo(eng)
         with pytest.raises(EngagementError, match="not found"):
             repo.remove_term("nonexistent")
+
+    def test_find_searches_definition(self, eng: Path) -> None:
+        """D-007: find() should search definitions, not just term names."""
+        repo = GlossaryRepo(eng)
+        repo.add_term("widget", "A reusable graphical component")
+        results = repo.find("graphical")
+        assert len(results) == 1
+        assert results[0].term == "widget"
+
+    def test_find_searches_notes(self, eng: Path) -> None:
+        """D-007: find() should search notes."""
+        repo = GlossaryRepo(eng)
+        repo.add_term("widget", "A component", notes="See also: gadget framework")
+        results = repo.find("gadget")
+        assert len(results) == 1
+
+    def test_find_searches_sources(self, eng: Path) -> None:
+        """D-007: find() should search sources."""
+        repo = GlossaryRepo(eng)
+        repo.add_term("widget", "A component", sources=["BABOK Guide v3"])
+        results = repo.find("BABOK")
+        assert len(results) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +216,13 @@ class TestDecisions:
         d = repo.create("File test", "c", "d", "con")
         path = eng / ".praxis" / "engagement" / "decisions" / f"{d.id}.md"
         assert path.exists()
+
+    def test_self_supersede_rejected(self, eng: Path) -> None:
+        """D-013: A decision cannot supersede itself."""
+        repo = DecisionRepo(eng)
+        d = repo.create("Self ref", "c", "d", "con")
+        with pytest.raises(EngagementError, match="cannot supersede itself"):
+            repo.supersede(d.id, d.id)
 
 
 # ---------------------------------------------------------------------------

@@ -35,15 +35,17 @@ class GlossaryRepo:
         return None
 
     def find(self, query: str) -> list[GlossaryTerm]:
-        """Case-insensitive substring search on term and synonyms."""
+        """Case-insensitive substring search on term, definition, synonyms, notes, sources."""
         glossary = self.load()
         lower = query.lower()
         results: list[GlossaryTerm] = []
         for t in glossary.terms:
-            if lower in t.term.lower():
-                results.append(t)
-                continue
-            if any(lower in s.lower() for s in t.synonyms):
+            haystacks = [t.term, t.definition]
+            if t.notes:
+                haystacks.append(t.notes)
+            haystacks.extend(t.synonyms)
+            haystacks.extend(t.sources)
+            if any(lower in h.lower() for h in haystacks):
                 results.append(t)
         return results
 
