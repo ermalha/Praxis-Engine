@@ -74,28 +74,33 @@ class AnthropicTransport(Transport):
         client = self._get_client()
         params = self._build_params(request)
 
-        with client.messages.stream(**params) as stream:
-            for event in stream:
-                _check_cancel(cancel_event)
-                chunk = self._event_to_chunk(event)
-                if chunk is not None:
-                    yield chunk
+        try:
+            with client.messages.stream(**params) as stream:
+                for event in stream:
+                    _check_cancel(cancel_event)
+                    chunk = self._event_to_chunk(event)
+                    if chunk is not None:
+                        yield chunk
 
-        # Final usage from the accumulated message
-        final_message = stream.get_final_message()
-        if final_message is not None:
-            yield StreamChunk(
-                usage=Usage(
-                    prompt_tokens=final_message.usage.input_tokens,
-                    completion_tokens=final_message.usage.output_tokens,
-                    cache_read_tokens=getattr(final_message.usage, "cache_read_input_tokens", 0)
-                    or 0,
-                    cache_write_tokens=getattr(
-                        final_message.usage, "cache_creation_input_tokens", 0
-                    )
-                    or 0,
-                ),
-            )
+            # Final usage from the accumulated message
+            final_message = stream.get_final_message()
+            if final_message is not None:
+                yield StreamChunk(
+                    usage=Usage(
+                        prompt_tokens=final_message.usage.input_tokens,
+                        completion_tokens=final_message.usage.output_tokens,
+                        cache_read_tokens=getattr(final_message.usage, "cache_read_input_tokens", 0)
+                        or 0,
+                        cache_write_tokens=getattr(
+                            final_message.usage, "cache_creation_input_tokens", 0
+                        )
+                        or 0,
+                    ),
+                )
+        except TransportError:
+            raise
+        except Exception as exc:
+            raise TransportError(f"Anthropic API error: {exc}", provider="anthropic") from exc
 
     def supports_tools(self) -> bool:
         return True

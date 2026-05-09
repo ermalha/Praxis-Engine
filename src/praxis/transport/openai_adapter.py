@@ -92,13 +92,22 @@ class OpenAITransport(Transport):
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
 
-        response = client.chat.completions.create(**params)
+        try:
+            response = client.chat.completions.create(**params)
+        except TransportError:
+            raise
+        except Exception as exc:
+            raise TransportError(f"OpenAI API call failed: {exc}", provider=self.name) from exc
         try:
             for chunk in response:
                 _check_cancel(cancel_event)
                 result = self._chunk_to_stream_chunk(chunk)
                 if result is not None:
                     yield result
+        except TransportError:
+            raise
+        except Exception as exc:
+            raise TransportError(f"OpenAI stream error: {exc}", provider=self.name) from exc
         finally:
             if hasattr(response, "close"):
                 response.close()
