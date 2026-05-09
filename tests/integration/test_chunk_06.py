@@ -28,12 +28,12 @@ def skill_env(tmp_path: Path) -> tuple[Path, Path]:
     """
     # Create a bundled skill
     bundled = tmp_path / "bundled"
-    skill_dir = bundled / "_test" / "echo-skill"
+    skill_dir = bundled / "test" / "echo-skill"
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
         "---\n"
         "name: echo-skill\n"
-        "category: _test\n"
+        "category: test\n"
         "description: A minimal test skill.\n"
         "when_to_use: Testing.\n"
         "requires_toolsets: []\n"

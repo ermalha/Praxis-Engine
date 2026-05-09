@@ -90,11 +90,15 @@ def _load_skill_dir(
 def _discover_skills(
     root: Path,
     source: Literal["bundled", "user", "engagement"],
+    *,
+    include_test: bool = False,
 ) -> dict[str, Skill]:
     """Discover all skills under *root*.
 
     Expected layout: ``root/<category>/<name>/SKILL.md``.
     Returns a dict keyed by skill name.
+
+    Categories starting with ``_`` are skipped unless *include_test* is True.
     """
     skills: dict[str, Skill] = {}
     if not root.is_dir():
@@ -102,6 +106,8 @@ def _discover_skills(
 
     for category_dir in sorted(root.iterdir()):
         if not category_dir.is_dir():
+            continue
+        if category_dir.name.startswith("_") and not include_test:
             continue
         for skill_dir in sorted(category_dir.iterdir()):
             if not skill_dir.is_dir():
