@@ -31,6 +31,25 @@ in `PROJECT.md` and `chunks/`. Track progress in `chunks/STATUS.md`.
 
 ---
 
+## Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Python | 3.11+ | Required |
+| [uv](https://docs.astral.sh/uv/) | latest | Package manager |
+| git | any | For source install |
+| LLM API key | — | Anthropic, OpenAI, or OpenRouter. Not needed for offline/local models via `openai_compat`. |
+
+### Offline vs. online operation
+
+| Mode | What you need | Command |
+|---|---|---|
+| **Online** (cloud LLM) | API key for your provider | `uv run praxis chat` |
+| **Offline** (local LLM) | Ollama / vLLM / LM Studio running locally | `uv run praxis chat` (configure `openai_compat` provider) |
+| **Offline** (no LLM) | Nothing | `uv run praxis engagement …` (manage engagement model only) |
+
+---
+
 ## Quick start
 
 ```bash
@@ -38,29 +57,31 @@ in `PROJECT.md` and `chunks/`. Track progress in `chunks/STATUS.md`.
 uv pip install praxis-ba[all]
 
 # Or from source
-git clone https://github.com/<org>/praxis.git
-cd praxis
+git clone https://github.com/ermalha/Praxis-Engine.git
+cd Praxis-Engine
 uv sync --extra dev --extra all
 
-# Set up a profile
-praxis profile create alice
+# Set up a profile with a model
+uv run praxis profile create alice \
+  --provider anthropic --model claude-sonnet-4-20250514 \
+  --api-key-env ANTHROPIC_API_KEY
 
-# Configure your model (any of: anthropic, openai, openrouter, openai-compat for Ollama/vLLM/etc.)
+# Configure your API key
 export ANTHROPIC_API_KEY=sk-ant-...
-praxis config show
+uv run praxis config show
 
 # Initialize an engagement
 mkdir my-project && cd my-project
-praxis init --name "My Project" --methodology agile
+uv run praxis init --name "My Project" --methodology agile
 
 # Talk to the agent
-praxis chat
+uv run praxis chat
 
 # Or let it run autonomously
-praxis run
+uv run praxis run
 
 # Or use the TUI
-praxis tui
+uv run praxis tui
 ```
 
 ---
