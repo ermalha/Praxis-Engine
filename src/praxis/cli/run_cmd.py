@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from praxis.config.engagement import find_engagement
+from praxis.config.profiles import get_active_profile_name
 from praxis.core.wake.models import WakeTrigger
 
 if TYPE_CHECKING:
@@ -30,13 +31,14 @@ def _resolve_eng(engagement: str | None) -> Path:
     return eng
 
 
-def _make_orchestrator(eng: Path) -> Orchestrator:
+def _make_orchestrator(eng: Path, profile_name: str | None = None) -> Orchestrator:
     """Build an Orchestrator with stub agent (for CLI-driven wakes)."""
     from praxis.config.loader import load_engagement_config, load_profile
     from praxis.core.orchestrator import Orchestrator
 
     eng_config = load_engagement_config(eng)
-    profile = load_profile("default")
+    resolved_name = profile_name or get_active_profile_name()
+    profile = load_profile(resolved_name)
 
     return Orchestrator(
         agent=None,  # type: ignore[arg-type]
@@ -48,11 +50,12 @@ def _make_orchestrator(eng: Path) -> Orchestrator:
 
 def run(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    profile: str | None = typer.Option(None, "--profile", "-p", help="Profile name."),
 ) -> None:
     """Start the orchestrator — runs continuously until Ctrl-C."""
     eng = _resolve_eng(engagement)
 
-    orch = _make_orchestrator(eng)
+    orch = _make_orchestrator(eng, profile_name=profile)
     cancel = threading.Event()
 
     def _on_sigint(_sig: int, _frame: object) -> None:
@@ -72,12 +75,13 @@ def run(
 
 def wake(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    profile: str | None = typer.Option(None, "--profile", "-p", help="Profile name."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Plan tasks but don't execute."),
     output_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """Run a single wake cycle."""
     eng = _resolve_eng(engagement)
-    orch = _make_orchestrator(eng)
+    orch = _make_orchestrator(eng, profile_name=profile)
 
     report = orch.wake_once(trigger=WakeTrigger.MANUAL, dry_run=dry_run)
 
