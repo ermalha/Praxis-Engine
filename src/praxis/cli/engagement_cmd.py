@@ -9,6 +9,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markup import escape as rich_escape
 from rich.table import Table
 
 from praxis.audit.context import set_audit_context
@@ -16,6 +17,7 @@ from praxis.cli.errors import handle_praxis_errors
 from praxis.config.engagement import find_engagement
 from praxis.config.loader import load_engagement_config
 from praxis.engagement import (
+    AssumptionsConstraintsRepo,
     DecisionRepo,
     GlossaryRepo,
     OpenQuestionsRepo,
@@ -225,7 +227,7 @@ def stakeholder_get(
     if s is None:
         err_console.print(f"[red]Stakeholder {sid!r} not found.[/red]")
         raise typer.Exit(1)
-    console.print(f"[bold]{s.name}[/bold] — {s.role} [{s.id}]")
+    console.print(f"[bold]{s.name}[/bold] — {s.role} {rich_escape(f'[{s.id}]')}")
     if s.expertise:
         console.print(f"Expertise: {', '.join(s.expertise)}")
     if s.decision_authority:
@@ -246,7 +248,7 @@ def stakeholder_add(
         repo = StakeholderRepo(eng)
         exp = [e.strip() for e in expertise.split(",")] if expertise else None
         s = repo.add(name, role, expertise=exp)
-        console.print(f"[green]Added stakeholder {s.name!r} [{s.id}].[/green]")
+        console.print(f"[green]Added stakeholder {s.name!r} {rich_escape(f'[{s.id}]')}.[/green]")
 
 
 @stakeholder_app.command("update")
@@ -366,7 +368,7 @@ def decision_new(
         except EngagementError as exc:
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
-        console.print(f"[green]Created decision {d.id}.[/green]")
+        console.print(f"[green]Created decision {rich_escape(d.id)}.[/green]")
 
 
 @decision_app.command("supersede")
@@ -385,7 +387,8 @@ def decision_supersede(
         except EngagementError as exc:
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
-        console.print(f"[green]Decision {d.id} superseded by {by}.[/green]")
+        msg = f"Decision {rich_escape(d.id)} superseded by {rich_escape(by)}."
+        console.print(f"[green]{msg}[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +448,7 @@ def question_open(
         except EngagementError as exc:
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
-        console.print(f"[green]Opened question {q.id}.[/green]")
+        console.print(f"[green]Opened question {rich_escape(q.id)}.[/green]")
 
 
 @question_app.command("answer")
@@ -464,7 +467,7 @@ def question_answer(
         except EngagementError as exc:
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
-        console.print(f"[green]Answered question {q.id}.[/green]")
+        console.print(f"[green]Answered question {rich_escape(q.id)}.[/green]")
 
 
 @question_app.command("withdraw")
@@ -482,7 +485,7 @@ def question_withdraw(
         except EngagementError as exc:
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
-        console.print(f"[green]Withdrew question {q.id}.[/green]")
+        console.print(f"[green]Withdrew question {rich_escape(q.id)}.[/green]")
 
 
 # ---------------------------------------------------------------------------
@@ -537,7 +540,7 @@ def system_add(
     with _audit_ctx(eng):
         repo = SystemLandscapeRepo(eng)
         s = repo.add(name, kind, description=description)
-        console.print(f"[green]Added system {s.name!r} [{s.id}].[/green]")
+        console.print(f"[green]Added system {s.name!r} {rich_escape(f'[{s.id}]')}.[/green]")
 
 
 @system_app.command("show")
@@ -553,7 +556,7 @@ def system_show(
     if s is None:
         err_console.print(f"[red]System {sid!r} not found.[/red]")
         raise typer.Exit(1)
-    console.print(f"[bold]{s.name}[/bold] ({s.kind}) [{s.id}]")
+    console.print(f"[bold]{s.name}[/bold] ({s.kind}) {rich_escape(f'[{s.id}]')}")
     if s.description:
         console.print(f"Description: {s.description}")
     console.print(f"Status: {s.status}")
@@ -614,7 +617,7 @@ def risk_add(
     with _audit_ctx(eng):
         repo = RiskRepo(eng)
         r = repo.add(title, description, likelihood, impact, mitigation=mitigation)
-        console.print(f"[green]Added risk {r.title!r} [{r.id}].[/green]")
+        console.print(f"[green]Added risk {r.title!r} {rich_escape(f'[{r.id}]')}.[/green]")
 
 
 @risk_app.command("update")
@@ -716,7 +719,7 @@ def timeline_add(
         repo = TimelineRepo(eng)
         d = date.fromisoformat(target_date)
         m = repo.add(title, d, notes=notes)
-        console.print(f"[green]Added milestone {m.title!r} [{m.id}].[/green]")
+        console.print(f"[green]Added milestone {m.title!r} {rich_escape(f'[{m.id}]')}.[/green]")
 
 
 @timeline_app.command("update")
@@ -745,3 +748,149 @@ def timeline_update(
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
         console.print(f"[green]Updated milestone {m.title!r}.[/green]")
+
+
+# ---------------------------------------------------------------------------
+# Assumptions
+# ---------------------------------------------------------------------------
+
+assumption_app = typer.Typer(name="assumption", help="Manage assumptions.")
+engagement_app.add_typer(assumption_app)
+
+
+@assumption_app.command("list")
+@handle_praxis_errors
+def assumption_list(
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """List all assumptions."""
+    eng = _resolve_engagement(engagement)
+    repo = AssumptionsConstraintsRepo(eng)
+    alist = repo.list_assumptions()
+
+    if json_output:
+        data = [a.model_dump(mode="json") for a in alist]
+        console.print_json(json.dumps(data))
+        return
+
+    if not alist:
+        console.print("[dim]No assumptions.[/dim]")
+        return
+
+    table = Table(title="Assumptions")
+    table.add_column("ID", style="dim")
+    table.add_column("Statement", style="bold")
+    table.add_column("Validated")
+
+    for a in alist:
+        validated = "yes" if a.validated else "no"
+        table.add_row(a.id, a.statement, validated)
+    console.print(table)
+
+
+@assumption_app.command("add")
+@handle_praxis_errors
+def assumption_add(
+    statement: str = typer.Argument(..., help="Assumption statement."),
+    rationale: str | None = typer.Option(None, "--rationale", "-r"),
+    validation_method: str | None = typer.Option(None, "--validation-method"),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Add an assumption."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        a = repo.add_assumption(statement, rationale=rationale, validation_method=validation_method)
+        console.print(f"[green]Added assumption {rich_escape(f'[{a.id}]')}.[/green]")
+
+
+@assumption_app.command("validate")
+@handle_praxis_errors
+def assumption_validate(
+    aid: str = typer.Argument(..., help="Assumption ID."),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Mark an assumption as validated."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        try:
+            a = repo.validate_assumption(aid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Validated assumption {rich_escape(f'[{a.id}]')}.[/green]")
+
+
+@assumption_app.command("invalidate")
+@handle_praxis_errors
+def assumption_invalidate(
+    aid: str = typer.Argument(..., help="Assumption ID."),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Mark an assumption as invalidated."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        try:
+            a = repo.invalidate_assumption(aid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Invalidated assumption {rich_escape(f'[{a.id}]')}.[/green]")
+
+
+# ---------------------------------------------------------------------------
+# Constraints
+# ---------------------------------------------------------------------------
+
+constraint_app = typer.Typer(name="constraint", help="Manage constraints.")
+engagement_app.add_typer(constraint_app)
+
+
+@constraint_app.command("list")
+@handle_praxis_errors
+def constraint_list(
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """List all constraints."""
+    eng = _resolve_engagement(engagement)
+    repo = AssumptionsConstraintsRepo(eng)
+    clist = repo.list_constraints()
+
+    if json_output:
+        data = [c.model_dump(mode="json") for c in clist]
+        console.print_json(json.dumps(data))
+        return
+
+    if not clist:
+        console.print("[dim]No constraints.[/dim]")
+        return
+
+    table = Table(title="Constraints")
+    table.add_column("ID", style="dim")
+    table.add_column("Statement", style="bold")
+    table.add_column("Type")
+    table.add_column("Source")
+
+    for c in clist:
+        table.add_row(c.id, c.statement, c.constraint_type, c.source or "-")
+    console.print(table)
+
+
+@constraint_app.command("add")
+@handle_praxis_errors
+def constraint_add(
+    statement: str = typer.Argument(..., help="Constraint statement."),
+    constraint_type: str = typer.Argument(..., help="Type (technical, business, regulatory)."),
+    source: str | None = typer.Option(None, "--source", "-s"),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Add a constraint."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        c = repo.add_constraint(statement, constraint_type, source=source)
+        console.print(f"[green]Added constraint {rich_escape(f'[{c.id}]')}.[/green]")
