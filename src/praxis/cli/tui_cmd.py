@@ -23,6 +23,7 @@ def _resolve_eng(engagement: str | None) -> Path:
 def tui(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     _screen: str = typer.Option("queue", "--screen", "-s", help="Initial screen."),
+    smoke: bool = typer.Option(False, "--smoke", help="Headless smoke test: load and exit."),
 ) -> None:
     """Launch the Praxis TUI."""
     eng = _resolve_eng(engagement)
@@ -32,6 +33,17 @@ def tui(
     except ImportError:
         err_console.print("[red]textual not installed. Install: pip install praxis-ba[tui][/red]")
         raise typer.Exit(1) from None
+
+    if smoke:
+        import json
+
+        try:
+            _app = PraxisApp(engagement_path=eng)
+            typer.echo(json.dumps({"status": "ok", "screens_loaded": True}))
+        except Exception as exc:  # noqa: BLE001
+            typer.echo(json.dumps({"status": "error", "error": str(exc)}))
+            raise typer.Exit(1) from None
+        return
 
     app = PraxisApp(engagement_path=eng)
     app.run()
