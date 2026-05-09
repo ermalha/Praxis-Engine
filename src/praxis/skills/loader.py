@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.resources
 import logging
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -112,7 +113,11 @@ def _discover_skills(
                 skill = _load_skill_dir(skill_dir, source)
                 skills[skill.frontmatter.name] = skill
             except SkillError:
-                logger.warning("Skipping invalid skill at %s", skill_dir, exc_info=True)
+                logger.warning(
+                    "Skipping invalid skill at %s",
+                    skill_dir,
+                    exc_info=bool(os.environ.get("PRAXIS_DEBUG")),
+                )
 
     return skills
 
