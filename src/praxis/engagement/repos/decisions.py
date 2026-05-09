@@ -116,4 +116,9 @@ class DecisionRepo:
 
     def supersede(self, did: str, superseded_by: str) -> Decision:
         """Mark a decision as superseded."""
+        if did == superseded_by:
+            raise EngagementError(
+                f"Decision {did!r} cannot supersede itself",
+                id=did,
+            )
         return self.update(did, status="superseded", superseded_by=superseded_by)
