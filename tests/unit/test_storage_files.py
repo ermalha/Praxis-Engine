@@ -52,6 +52,11 @@ class TestYamlRoundTrip:
         with pytest.raises(StorageError, match="Validation failed"):
             read_yaml_typed(path, SampleModel)
 
+    def test_read_directory_raises(self, tmp_path: Path) -> None:
+        """D-020: Passing a directory path should raise StorageError."""
+        with pytest.raises(StorageError, match="Not a file"):
+            read_yaml_typed(tmp_path, SampleModel)
+
 
 class FrontmatterModel(BaseModel):
     model_config = ConfigDict(extra="forbid")

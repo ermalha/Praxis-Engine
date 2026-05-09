@@ -32,11 +32,15 @@ def read_yaml_typed(path: Path, model: type[T]) -> T:
     """
     if not path.exists():
         raise StorageError(f"File not found: {path}", path=str(path))
+    if not path.is_file():
+        raise StorageError(f"Not a file: {path}", path=str(path))
     try:
         with open(path) as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as exc:
         raise StorageError(f"Malformed YAML in {path}: {exc}", path=str(path)) from exc
+    except OSError as exc:
+        raise StorageError(f"Cannot read {path}: {exc}", path=str(path)) from exc
 
     if data is None:
         data = {}
@@ -61,11 +65,14 @@ def write_yaml_typed(path: Path, obj: BaseModel) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     data = obj.model_dump(mode="json")
-    with open(tmp, "w") as f:
-        yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
-        f.flush()
-        os.fsync(f.fileno())
-    tmp.rename(path)
+    try:
+        with open(tmp, "w") as f:
+            yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp.rename(path)
+    except OSError as exc:
+        raise StorageError(f"Cannot write {path}: {exc}", path=str(path)) from exc
 
 
 def read_markdown_with_frontmatter(path: Path, frontmatter_model: type[T]) -> tuple[T, str]:
