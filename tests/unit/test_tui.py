@@ -92,6 +92,13 @@ class TestPraxisApp:
             await pilot.press("q")
 
     @pytest.mark.asyncio()
+    async def test_initial_screen_conversation(self, populated_eng: Path) -> None:
+        app = PraxisApp(engagement_path=populated_eng, initial_screen="conversation")
+        async with app.run_test() as pilot:
+            assert isinstance(app.screen, ConversationScreen)
+            await pilot.press("q")
+
+    @pytest.mark.asyncio()
     async def test_help_notification(self, populated_eng: Path) -> None:
         app = PraxisApp(engagement_path=populated_eng)
         async with app.run_test() as pilot:

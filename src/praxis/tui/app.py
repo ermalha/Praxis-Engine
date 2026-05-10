@@ -47,6 +47,7 @@ class PraxisApp(App[None]):
         *,
         profile_name: str = "default",
         model_alias: str | None = None,
+        initial_screen: str = "queue",
         chat_runtime_factory: object | None = None,
         **kwargs: object,
     ) -> None:
@@ -54,6 +55,7 @@ class PraxisApp(App[None]):
         self._engagement_path = engagement_path
         self._profile_name = profile_name
         self._model_alias = model_alias
+        self._initial_screen = initial_screen
         self._chat_runtime_factory = chat_runtime_factory
         self._screens: dict[
             str, WorkQueueScreen | ConversationScreen | EngagementScreen | AuditScreen
@@ -74,7 +76,8 @@ class PraxisApp(App[None]):
         }
         for name, screen in self._screens.items():
             self.install_screen(screen, name)
-        self.push_screen("queue")
+        initial = self._initial_screen if self._initial_screen in self._screens else "queue"
+        self.push_screen(initial)
 
     def action_switch_screen(self, screen_name: str) -> None:
         if screen_name in self._screens:
