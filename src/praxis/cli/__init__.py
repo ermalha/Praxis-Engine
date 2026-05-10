@@ -4,6 +4,7 @@ import typer
 
 from praxis import __version__
 
+from .artifact_cmd import artifact_app
 from .ask_cmd import ask
 from .audit_cmd import audit_app
 from .browser_cmd import browser_app
@@ -58,6 +59,7 @@ app.add_typer(queue_app)
 app.add_typer(session_app)
 app.add_typer(skill_app)
 app.add_typer(tool_app)
+app.add_typer(artifact_app)
 app.command("run")(run)
 app.command("wake")(wake)
 app.command("status")(status)
