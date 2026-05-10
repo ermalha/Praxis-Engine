@@ -145,8 +145,7 @@ def _assumptions_constraints_section(path: Path) -> str:
     repo = AssumptionsConstraintsRepo(path)
     assumptions = [f"- {item.statement}" for item in repo.list_assumptions()]
     constraints = [
-        f"- [{item.constraint_type}] {item.statement}"
-        for item in repo.list_constraints()
+        f"- [{item.constraint_type}] {item.statement}" for item in repo.list_constraints()
     ]
     return (
         "Assumptions:\n"

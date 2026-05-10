@@ -45,9 +45,8 @@ class ConfigScreen(Screen[None]):
             else None
         )
         model_lines = ["[bold]Model/Profile[/bold]"]
-        model_lines.append(
-            f"Active profile: {profile.name if profile is not None else profile_name}"
-        )
+        active_profile = profile.name if profile is not None else profile_name
+        model_lines.append(f"Active profile: {active_profile}")
         if model is not None:
             model_lines.extend(
                 [
@@ -71,12 +70,16 @@ class ConfigScreen(Screen[None]):
                 "[bold]Setup guidance[/bold]",
                 "OpenRouter:",
                 "  export OPENROUTER_API_KEY=...",
-                "  praxis profile create realworld --provider openrouter --model anthropic/claude-sonnet-4 --api-key-env OPENROUTER_API_KEY --set-default",
+                "  praxis profile create realworld --provider openrouter \\",
+                "    --model anthropic/claude-sonnet-4 \\",
+                "    --api-key-env OPENROUTER_API_KEY --set-default",
                 "Standalone/local OpenAI-compatible:",
-                "  praxis profile create local --provider openai_compat --model <model> --api-key-env OPENAI_API_KEY --set-default",
+                "  praxis profile create local --provider openai_compat \\",
+                "    --model <model> --api-key-env OPENAI_API_KEY --set-default",
                 "  then edit the profile YAML to set base_url if needed.",
                 "",
-                "Future v0.2.x: this screen will add editable forms; for v0.2.0 it safely displays config and exact commands without collecting raw keys.",
+                "Future v0.2.x: this screen will add editable forms. In v0.2.0 it",
+                "safely displays config and exact commands without collecting raw keys.",
             ]
         )
         self.query_one("#config-body", Static).update(self.config_text)

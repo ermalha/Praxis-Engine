@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import typer
@@ -35,10 +36,17 @@ def _resolve_db(engagement: str | None) -> Path:
 def sessions_list(
     limit: int = typer.Option(20, "--limit", "-n"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    output_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """List recent sessions."""
     db_path = _resolve_db(engagement)
     sessions = list_sessions(db_path, limit=limit)
+
+    if output_json:
+        console.print(
+            json.dumps([s.model_dump(mode="json") for s in sessions], indent=2, default=str)
+        )
+        return
 
     if not sessions:
         console.print("[dim]No sessions.[/dim]")

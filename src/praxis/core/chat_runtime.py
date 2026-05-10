@@ -12,7 +12,7 @@ from praxis.config.models import EngagementConfig, ProfileConfig
 from praxis.core.agent import Agent
 from praxis.core.models import StreamEvent
 from praxis.skills import SkillRegistry
-from praxis.tools.approval import ApprovalDecision
+from praxis.tools.models import ApprovalDecision
 from praxis.tools.registry import ToolSpec, default_registry
 from praxis.transport import Transport, make_transport
 
@@ -67,7 +67,9 @@ class ChatRuntime:
         agent_factory: AgentFactory | None = None,
     ) -> ChatRuntime:
         """Create a runtime by resolving profile, engagement, model, tools, and skills."""
-        engagement = load_engagement_config(engagement_path) if engagement_path is not None else None
+        engagement = (
+            load_engagement_config(engagement_path) if engagement_path is not None else None
+        )
         profile = load_profile(profile_name)
         model_config = resolve_model_config(profile, engagement, model_alias)
         resolved_transport = transport or make_transport(model_config)

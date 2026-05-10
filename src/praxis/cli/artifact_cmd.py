@@ -18,9 +18,19 @@ console = Console()
 err_console = Console(stderr=True)
 
 _PROMPTS = {
-    "scope-brief": "Create an MVP scope brief using only known engagement facts. Include in-scope, out-of-scope, success metrics, constraints, risks, and open questions.",
-    "backlog": "Generate a backlog artifact for the implementation team. Include epics, user stories, acceptance criteria, dependencies, open questions, and risks. Mark uncertain items clearly.",
-    "traceability": "Create a traceability matrix from business outcomes to MVP epics and candidate stories. Make gaps visible.",
+    "scope-brief": (
+        "Create an MVP scope brief using only known engagement facts. Include in-scope, "
+        "out-of-scope, success metrics, constraints, risks, and open questions."
+    ),
+    "backlog": (
+        "Generate a backlog artifact for the implementation team. Include epics, user "
+        "stories, acceptance criteria, dependencies, open questions, and risks. Mark "
+        "uncertain items clearly."
+    ),
+    "traceability": (
+        "Create a traceability matrix from business outcomes to MVP epics and candidate "
+        "stories. Make gaps visible."
+    ),
 }
 _OUTPUT_DIRS = {
     "scope-brief": "reports",
@@ -76,7 +86,13 @@ def artifact_list(
     eng = _resolve_engagement(engagement)
     artifacts = list_artifacts(eng)
     if output_json:
-        console.print(json.dumps([a.model_dump(mode="json") for a in artifacts], indent=2, default=str))
+        console.print(
+            json.dumps(
+                [a.model_dump(mode="json") for a in artifacts],
+                indent=2,
+                default=str,
+            )
+        )
         return
     if not artifacts:
         console.print("[dim]No artifacts.[/dim]")

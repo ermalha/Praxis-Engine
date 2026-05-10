@@ -104,7 +104,8 @@ class PraxisApp(App[None]):
 
     def action_help(self) -> None:
         self.notify(
-            "Keys: 1=Queue 2=Chat 3=Engagement 4=Audit 5=Backlog 6=Config 7=Setup q=Quit r=Refresh w=Wake",
+            "Keys: 1=Queue 2=Chat 3=Engagement 4=Audit 5=Backlog "
+            "6=Config 7=Setup q=Quit r=Refresh w=Wake",
             title="Help",
         )
 

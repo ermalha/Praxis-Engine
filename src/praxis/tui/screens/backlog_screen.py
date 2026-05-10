@@ -85,7 +85,9 @@ class BacklogScreen(Screen[None]):
 
     def _load_entries(self) -> None:
         self._entries = self._discover_artifacts()
-        self.backlog_text = "\n".join(f"{entry.kind}: {entry.title} — {entry.path}" for entry in self._entries)
+        self.backlog_text = "\n".join(
+            f"{entry.kind}: {entry.title} — {entry.path}" for entry in self._entries
+        )
 
         table = self.query_one("#backlog-table", DataTable)
         table.clear()

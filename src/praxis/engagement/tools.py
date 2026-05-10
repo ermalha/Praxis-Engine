@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from praxis.tools import ToolContext, ToolResult, tool
 
 from .repos.assumptions import AssumptionsConstraintsRepo
@@ -384,7 +386,7 @@ def assumption_add(
 def constraint_add(
     ctx: ToolContext,
     statement: str,
-    constraint_type: str,
+    constraint_type: Literal["technical", "regulatory", "business", "schedule", "budget", "other"],
     source: str | None = None,
 ) -> ToolResult:
     """Add a constraint."""
