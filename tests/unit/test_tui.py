@@ -158,7 +158,6 @@ class FakeRuntime:
         return SlashResult(continue_session=True, text=f"handled {command}")
 
 
-
 class TestBacklogScreen:
     @pytest.mark.asyncio()
     async def test_switch_to_backlog(self, populated_eng: Path) -> None:
@@ -233,4 +232,28 @@ class TestConversationScreenBackend:
             await pilot.pause()
 
             assert "handled /help" in screen.transcript_text
+            await pilot.press("q")
+
+
+class TestConfigAndSetupScreens:
+    @pytest.mark.asyncio()
+    async def test_config_screen_renders_model_guidance(self, populated_eng: Path) -> None:
+        from praxis.tui.screens.config_screen import ConfigScreen
+
+        app = PraxisApp(engagement_path=populated_eng, initial_screen="config")
+        async with app.run_test() as pilot:
+            assert isinstance(app.screen, ConfigScreen)
+            assert "OpenRouter" in app.screen.config_text
+            assert "Standalone/local" in app.screen.config_text
+            await pilot.press("q")
+
+    @pytest.mark.asyncio()
+    async def test_project_setup_screen_renders_project_commands(self, populated_eng: Path) -> None:
+        from praxis.tui.screens.project_setup_screen import ProjectSetupScreen
+
+        app = PraxisApp(engagement_path=populated_eng, initial_screen="setup")
+        async with app.run_test() as pilot:
+            assert isinstance(app.screen, ProjectSetupScreen)
+            assert "praxis init" in app.screen.setup_text
+            assert "OPENROUTER_API_KEY" in app.screen.setup_text
             await pilot.press("q")

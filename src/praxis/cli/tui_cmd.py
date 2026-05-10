@@ -51,6 +51,8 @@ def tui(
                             "engagement",
                             "audit",
                             "backlog",
+                            "config",
+                            "setup",
                         ],
                     }
                 )
