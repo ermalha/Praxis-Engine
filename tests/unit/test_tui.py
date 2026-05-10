@@ -158,6 +158,36 @@ class FakeRuntime:
         return SlashResult(continue_session=True, text=f"handled {command}")
 
 
+
+class TestBacklogScreen:
+    @pytest.mark.asyncio()
+    async def test_switch_to_backlog(self, populated_eng: Path) -> None:
+        from praxis.tui.screens.backlog_screen import BacklogScreen
+
+        app = PraxisApp(engagement_path=populated_eng)
+        async with app.run_test() as pilot:
+            await pilot.press("5")
+            assert isinstance(app.screen, BacklogScreen)
+            await pilot.press("q")
+
+    @pytest.mark.asyncio()
+    async def test_renders_artifact_files(self, populated_eng: Path) -> None:
+        from praxis.tui.screens.backlog_screen import BacklogScreen
+
+        report_dir = populated_eng / ".praxis" / "artifacts" / "reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / "scope.md"
+        report_path.write_text("# Scope Brief\n\nNorthstar scope", encoding="utf-8")
+
+        app = PraxisApp(engagement_path=populated_eng, initial_screen="backlog")
+        async with app.run_test() as pilot:
+            assert isinstance(app.screen, BacklogScreen)
+            table = app.screen.query_one("#backlog-table")
+            assert table.row_count >= 1
+            assert "scope.md" in app.screen.backlog_text
+            await pilot.press("q")
+
+
 class TestConversationScreenBackend:
     @pytest.mark.asyncio()
     async def test_submit_streams_from_backend_runtime(self, populated_eng: Path) -> None:

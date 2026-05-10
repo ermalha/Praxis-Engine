@@ -50,6 +50,7 @@ def tui(
                             "conversation",
                             "engagement",
                             "audit",
+                            "backlog",
                         ],
                     }
                 )
