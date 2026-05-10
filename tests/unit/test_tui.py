@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from praxis.config.engagement import init_engagement
+from praxis.core.models import StreamEvent
 from praxis.engagement.repos.glossary import GlossaryRepo
 from praxis.engagement.repos.stakeholders import StakeholderRepo
 from praxis.storage.db import close_connection
@@ -123,4 +124,76 @@ class TestEngagementScreen:
             await pilot.press("3")
             table = app.screen.query_one("#stakeholders-table")
             assert table.row_count >= 1
+            await pilot.press("q")
+
+
+class FakeRuntime:
+    def __init__(self) -> None:
+        self.started = 0
+        self.closed = 0
+        self.messages: list[str] = []
+
+    def start(self) -> str:
+        self.started += 1
+        return "fake-session"
+
+    def close(self) -> None:
+        self.closed += 1
+
+    def stream_turn(self, user_input: str):
+        self.messages.append(user_input)
+        yield StreamEvent(type="text_delta", text="Hello from backend")
+        yield StreamEvent(type="done")
+
+    def handle_slash(self, command: str):
+        from praxis.core.chat_runtime import SlashResult
+
+        return SlashResult(continue_session=True, text=f"handled {command}")
+
+
+class TestConversationScreenBackend:
+    @pytest.mark.asyncio()
+    async def test_submit_streams_from_backend_runtime(self, populated_eng: Path) -> None:
+        fake = FakeRuntime()
+        app = PraxisApp(
+            engagement_path=populated_eng,
+            chat_runtime_factory=lambda **_: fake,
+        )
+
+        async with app.run_test() as pilot:
+            await pilot.press("2")
+            screen = app.screen
+            assert isinstance(screen, ConversationScreen)
+            input_widget = screen.query_one("#chat-input")
+            input_widget.focus()
+            input_widget.value = "hello"
+
+            await pilot.press("enter")
+            await pilot.pause()
+
+            assert fake.started == 1
+            assert fake.messages == ["hello"]
+            assert "Hello from backend" in screen.transcript_text
+            await pilot.press("q")
+
+    @pytest.mark.asyncio()
+    async def test_slash_command_uses_runtime(self, populated_eng: Path) -> None:
+        fake = FakeRuntime()
+        app = PraxisApp(
+            engagement_path=populated_eng,
+            chat_runtime_factory=lambda **_: fake,
+        )
+
+        async with app.run_test() as pilot:
+            await pilot.press("2")
+            screen = app.screen
+            assert isinstance(screen, ConversationScreen)
+            input_widget = screen.query_one("#chat-input")
+            input_widget.focus()
+            input_widget.value = "/help"
+
+            await pilot.press("enter")
+            await pilot.pause()
+
+            assert "handled /help" in screen.transcript_text
             await pilot.press("q")

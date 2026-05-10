@@ -41,9 +41,20 @@ class PraxisApp(App[None]):
         ("w", "manual_wake", "Wake"),
     ]
 
-    def __init__(self, engagement_path: Path, **kwargs: object) -> None:
+    def __init__(
+        self,
+        engagement_path: Path,
+        *,
+        profile_name: str = "default",
+        model_alias: str | None = None,
+        chat_runtime_factory: object | None = None,
+        **kwargs: object,
+    ) -> None:
         super().__init__(**kwargs)
         self._engagement_path = engagement_path
+        self._profile_name = profile_name
+        self._model_alias = model_alias
+        self._chat_runtime_factory = chat_runtime_factory
         self._screens: dict[
             str, WorkQueueScreen | ConversationScreen | EngagementScreen | AuditScreen
         ] = {}
@@ -52,7 +63,12 @@ class PraxisApp(App[None]):
         # Install named screens
         self._screens = {
             "queue": WorkQueueScreen(self._engagement_path),
-            "conversation": ConversationScreen(self._engagement_path),
+            "conversation": ConversationScreen(
+                self._engagement_path,
+                profile_name=self._profile_name,
+                model_alias=self._model_alias,
+                runtime_factory=self._chat_runtime_factory,
+            ),
             "engagement": EngagementScreen(self._engagement_path),
             "audit": AuditScreen(self._engagement_path),
         }
