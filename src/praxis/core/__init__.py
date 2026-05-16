@@ -1,6 +1,7 @@
 """Praxis core — agent, prompt, session, sufficiency, elicitation, orchestrator."""
 
 from praxis.core.agent import Agent
+from praxis.core.chat_runtime import ChatRuntime, SlashResult
 from praxis.core.elicitation import ElicitationDraft, ElicitationMode, plan_elicitations
 from praxis.core.models import AgentResponse, StreamEvent
 from praxis.core.orchestrator import Orchestrator
@@ -33,6 +34,7 @@ from praxis.core.wake import (
 __all__ = [
     "Agent",
     "AgentResponse",
+    "ChatRuntime",
     "CandidateTask",
     "DailyPlan",
     "ElicitationDraft",
@@ -40,6 +42,7 @@ __all__ = [
     "InfoNeed",
     "InfoNeedStatus",
     "Orchestrator",
+    "SlashResult",
     "StreamEvent",
     "SufficiencyReport",
     "SufficiencyVerdict",

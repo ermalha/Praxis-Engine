@@ -61,6 +61,15 @@ class TestFindEngagement:
     def test_returns_none_when_not_found(self, tmp_path: Path) -> None:
         assert find_engagement(tmp_path / "nowhere") is None
 
+    def test_ignores_plain_praxis_directory_without_config(self, tmp_path: Path) -> None:
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        (workspace / ".praxis").mkdir()
+        child = workspace / "child"
+        child.mkdir()
+
+        assert find_engagement(child) is None
+
 
 class TestIsEngagement:
     def test_true_after_init(self, tmp_engagement: Path) -> None:

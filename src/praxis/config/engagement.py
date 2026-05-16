@@ -128,21 +128,23 @@ def init_engagement(
     return config
 
 
-def find_engagement(start: Path) -> Path | None:
-    """Walk up from *start* looking for a ``.praxis/`` directory.
+def is_engagement(path: Path) -> bool:
+    """Return ``True`` if *path* contains an initialized engagement."""
+    return (path / ".praxis" / "config.yaml").is_file()
 
-    Returns the engagement root (parent of ``.praxis/``) or ``None``.
+
+def find_engagement(start: Path) -> Path | None:
+    """Walk up from *start* looking for an initialized engagement.
+
+    Returns the engagement root (parent of ``.praxis/``) or ``None``. A plain
+    ``.praxis/`` directory is not enough; runtime homes and repo metadata can
+    also use that name, so a valid engagement must contain ``.praxis/config.yaml``.
     """
     current = start.resolve()
     while True:
-        if (current / ".praxis").is_dir():
+        if is_engagement(current):
             return current
         parent = current.parent
         if parent == current:
             return None
         current = parent
-
-
-def is_engagement(path: Path) -> bool:
-    """Return ``True`` if *path* contains an initialized engagement."""
-    return (path / ".praxis" / "config.yaml").is_file()

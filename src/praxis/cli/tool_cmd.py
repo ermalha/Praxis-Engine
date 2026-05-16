@@ -21,9 +21,29 @@ tool_app = typer.Typer(name="tool", help="Manage and invoke tools.")
 @tool_app.command("list")
 def tool_list(
     toolset: str | None = typer.Option(None, "--toolset", "-t", help="Filter by toolset."),
+    output_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """List registered tools."""
     specs = default_registry.list_tools(toolset=toolset)
+    if output_json:
+        console.print(
+            json.dumps(
+                [
+                    {
+                        "name": spec.name,
+                        "toolset": spec.toolset,
+                        "dangerous": spec.dangerous,
+                        "interactive": spec.interactive,
+                        "description": spec.description,
+                        "parameters_schema": spec.parameters_schema,
+                    }
+                    for spec in specs
+                ],
+                indent=2,
+                default=str,
+            )
+        )
+        return
     if not specs:
         console.print("[dim]No tools registered.[/dim]")
         return
@@ -89,7 +109,7 @@ def tool_invoke(
         args = json.loads(args_json)
     except json.JSONDecodeError as exc:
         err_console.print(f"[red]Invalid JSON:[/red] {exc}")
-        raise typer.Exit(1) from exc
+        raise typer.Exit(1) from None
 
     # Build a minimal ToolContext
     profile_name = get_active_profile_name()

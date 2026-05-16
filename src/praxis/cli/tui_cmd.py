@@ -22,7 +22,7 @@ def _resolve_eng(engagement: str | None) -> Path:
 
 def tui(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
-    _screen: str = typer.Option("queue", "--screen", "-s", help="Initial screen."),
+    screen: str = typer.Option("queue", "--screen", "-s", help="Initial screen."),
     smoke: bool = typer.Option(False, "--smoke", help="Headless smoke test: load and exit."),
 ) -> None:
     """Launch the Praxis TUI."""
@@ -38,12 +38,29 @@ def tui(
         import json
 
         try:
-            _app = PraxisApp(engagement_path=eng)
-            typer.echo(json.dumps({"status": "ok", "screens_loaded": True}))
+            _app = PraxisApp(engagement_path=eng, initial_screen=screen)
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "ok",
+                        "screens_loaded": True,
+                        "initial_screen": screen,
+                        "available_screens": [
+                            "queue",
+                            "conversation",
+                            "engagement",
+                            "audit",
+                            "backlog",
+                            "config",
+                            "setup",
+                        ],
+                    }
+                )
+            )
         except Exception as exc:  # noqa: BLE001
             typer.echo(json.dumps({"status": "error", "error": str(exc)}))
             raise typer.Exit(1) from None
         return
 
-    app = PraxisApp(engagement_path=eng)
+    app = PraxisApp(engagement_path=eng, initial_screen=screen)
     app.run()
