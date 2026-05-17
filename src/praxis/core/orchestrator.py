@@ -214,6 +214,8 @@ class Orchestrator:
         report_file = str(
             task.metadata.get("report_file") or task.metadata.get("artifact_target") or "unknown"
         )
+        # D-039: use the report stem (without .json) as the related artifact ID.
+        report_stem = report_file[: -len(".json")] if report_file.endswith(".json") else report_file
         kind = str(task.metadata.get("artifact_kind", "artifact"))
         target = str(task.metadata.get("artifact_target", ""))[:60]
         repo = WorkQueueRepo(self._engagement_path)
@@ -231,6 +233,7 @@ class Orchestrator:
             priority=WorkItemPriority.MEDIUM,
             payload={"sufficiency_report_file": report_file},
             rationale="Sufficiency check returned INSUFFICIENT — needs elicitation",
+            related_artifact_ids=[report_stem],
         )
         return [item.id] if was_created else []
 
@@ -277,6 +280,13 @@ class Orchestrator:
         if not isinstance(change_data, dict):
             return []
         change = StateChange.model_validate(change_data)
+        # D-039: if the change is an answered question, link it via
+        # related_question_ids so the work item is traceable to the question.
+        related_question_ids = (
+            [change.entity_id]
+            if change.entity_type == "question" and change.change == "answered"
+            else None
+        )
         repo = WorkQueueRepo(self._engagement_path)
         item, was_created = repo.enqueue_deduped(
             dedup_key=f"state_change:{change.entity_type}:{change.entity_id}:{change.change}",
@@ -289,6 +299,7 @@ class Orchestrator:
             ),
             priority=WorkItemPriority.MEDIUM,
             rationale=f"State change since last wake: {change.entity_type}.{change.change}",
+            related_question_ids=related_question_ids,
         )
         return [item.id] if was_created else []
 

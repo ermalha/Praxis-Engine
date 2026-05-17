@@ -187,7 +187,8 @@ class TestWakeIdempotency:
 
     def test_insufficient_artifact_creates_elicit_task(self, tmp_engagement: Path) -> None:
         """D-034: handler now enqueues an actionable AGENT_FOLLOW_UP elicit task,
-        not a vague REVIEW_ARTIFACT placeholder."""
+        not a vague REVIEW_ARTIFACT placeholder.
+        D-039: related_artifact_ids is populated with the report stem."""
         init_engagement(tmp_engagement, "Test")
         _write_insufficient_report(tmp_engagement, name="report-xyz")
         orch = _make_orchestrator(tmp_engagement)
@@ -208,3 +209,5 @@ class TestWakeIdempotency:
         assert "spec" in item.title  # the artifact_kind from the seeded report
         assert item.payload.get("sufficiency_report_file") == "report-xyz.json"
         assert "praxis elicit --latest" in item.description
+        # D-039: related_artifact_ids carries the report stem.
+        assert item.related_artifact_ids == ["report-xyz"]
