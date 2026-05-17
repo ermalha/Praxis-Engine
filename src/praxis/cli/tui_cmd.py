@@ -54,6 +54,7 @@ def tui(
                             "config",
                             "setup",
                             "priorities",
+                            "artifact_viewer",
                         ],
                     }
                 )
