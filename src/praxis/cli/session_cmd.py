@@ -43,9 +43,7 @@ def sessions_list(
     sessions = list_sessions(db_path, limit=limit)
 
     if output_json:
-        console.print(
-            json.dumps([s.model_dump(mode="json") for s in sessions], indent=2, default=str)
-        )
+        typer.echo(json.dumps([s.model_dump(mode="json") for s in sessions], indent=2, default=str))
         return
 
     if not sessions:

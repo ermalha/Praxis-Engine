@@ -68,7 +68,7 @@ def skill_list(
             }
             for s in skills
         ]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not skills:

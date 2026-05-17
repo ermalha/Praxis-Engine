@@ -69,7 +69,7 @@ def check(
         raise typer.Exit(1)  # noqa: B904
 
     if output_json:
-        console.print(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
         return
 
     # Pretty-print

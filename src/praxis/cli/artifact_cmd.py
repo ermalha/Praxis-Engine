@@ -73,7 +73,7 @@ def artifact_generate(
         output_dir=_OUTPUT_DIRS.get(kind, "reports"),
     )
     if output_json:
-        console.print(json.dumps(result.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(result.model_dump(mode="json"), indent=2, default=str))
         return
     console.print(result.content)
     console.print(f"\n[green]Created artifact:[/green] {result.path}")
@@ -88,7 +88,7 @@ def artifact_list(
     eng = _resolve_engagement(engagement)
     artifacts = list_artifacts(eng)
     if output_json:
-        console.print(
+        typer.echo(
             json.dumps(
                 [a.model_dump(mode="json") for a in artifacts],
                 indent=2,
