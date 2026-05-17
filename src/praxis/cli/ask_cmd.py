@@ -11,6 +11,7 @@ from praxis.config import load_profile, resolve_model_config
 from praxis.config.profiles import get_active_profile_name
 from praxis.engagement import build_engagement_digest
 from praxis.errors import ConfigError, StorageError, TransportError
+from praxis.safety import warn_on_pii
 from praxis.transport import ChatRequest, Message, make_transport
 
 console = Console()
@@ -41,6 +42,7 @@ def ask(
     ),
 ) -> None:
     """Send a one-shot question to the resolved LLM and print the response."""
+    warn_on_pii(question)
     resolved_profile = profile or get_active_profile_name()
     try:
         prof = load_profile(resolved_profile)
