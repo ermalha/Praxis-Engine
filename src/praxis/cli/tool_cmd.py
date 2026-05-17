@@ -26,7 +26,7 @@ def tool_list(
     """List registered tools."""
     specs = default_registry.list_tools(toolset=toolset)
     if output_json:
-        console.print(
+        typer.echo(
             json.dumps(
                 [
                     {
@@ -79,7 +79,7 @@ def tool_describe(
     console.print(f"[bold]{spec.name}[/bold] — {spec.description}")
     console.print(f"Toolset: {spec.toolset} | Dangerous: {spec.dangerous}")
     console.print("\n[bold]Parameters JSON Schema:[/bold]")
-    console.print_json(json.dumps(spec.parameters_schema, indent=2))
+    typer.echo(json.dumps(spec.parameters_schema, indent=2))
 
 
 @tool_app.command("invoke")
@@ -141,4 +141,4 @@ def tool_invoke(
         err_console.print(f"[red]Tool error:[/red] {exc}")
         raise typer.Exit(1) from None
 
-    console.print_json(json.dumps(result, indent=2, default=str))
+    typer.echo(json.dumps(result, indent=2, default=str))

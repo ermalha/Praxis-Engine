@@ -6,11 +6,13 @@ from pathlib import Path
 
 from textual.app import App
 
+from praxis.tui.screens.artifact_viewer_screen import ArtifactViewerScreen
 from praxis.tui.screens.audit_screen import AuditScreen
 from praxis.tui.screens.backlog_screen import BacklogScreen
 from praxis.tui.screens.config_screen import ConfigScreen
 from praxis.tui.screens.conversation_screen import ConversationScreen
 from praxis.tui.screens.engagement_screen import EngagementScreen
+from praxis.tui.screens.priorities_screen import PrioritiesScreen
 from praxis.tui.screens.project_setup_screen import ProjectSetupScreen
 from praxis.tui.screens.queue_screen import WorkQueueScreen
 
@@ -22,6 +24,8 @@ _SCREEN_MAP = {
     "backlog": BacklogScreen,
     "config": ConfigScreen,
     "setup": ProjectSetupScreen,
+    "priorities": PrioritiesScreen,
+    "artifact_viewer": ArtifactViewerScreen,
 }
 
 
@@ -45,6 +49,8 @@ class PraxisApp(App[None]):
         ("5", "switch_screen('backlog')", "Backlog"),
         ("6", "switch_screen('config')", "Config"),
         ("7", "switch_screen('setup')", "Setup"),
+        ("8", "switch_screen('priorities')", "Priorities"),
+        ("9", "switch_screen('artifact_viewer')", "Artifacts"),
         ("q", "quit", "Quit"),
         ("question_mark", "help", "Help"),
         ("w", "manual_wake", "Wake"),
@@ -74,7 +80,9 @@ class PraxisApp(App[None]):
             | AuditScreen
             | BacklogScreen
             | ConfigScreen
-            | ProjectSetupScreen,
+            | ProjectSetupScreen
+            | PrioritiesScreen
+            | ArtifactViewerScreen,
         ] = {}
 
     def on_mount(self) -> None:
@@ -92,6 +100,8 @@ class PraxisApp(App[None]):
             "backlog": BacklogScreen(self._engagement_path),
             "config": ConfigScreen(self._engagement_path),
             "setup": ProjectSetupScreen(self._engagement_path),
+            "priorities": PrioritiesScreen(self._engagement_path),
+            "artifact_viewer": ArtifactViewerScreen(self._engagement_path),
         }
         for name, screen in self._screens.items():
             self.install_screen(screen, name)
@@ -105,7 +115,8 @@ class PraxisApp(App[None]):
     def action_help(self) -> None:
         self.notify(
             "Keys: 1=Queue 2=Chat 3=Engagement 4=Audit 5=Backlog "
-            "6=Config 7=Setup q=Quit r=Refresh w=Wake",
+            "6=Config 7=Setup 8=Priorities 9=Artifacts "
+            "q=Quit r=Refresh w=Wake",
             title="Help",
         )
 

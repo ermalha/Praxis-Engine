@@ -11,6 +11,7 @@ from rich.table import Table
 
 from praxis.config.engagement import find_engagement
 from praxis.config.loader import load_profile, resolve_model_config
+from praxis.config.profiles import get_active_profile_name
 from praxis.core.sufficiency import run_sufficiency_gate
 from praxis.transport.factory import make_transport
 
@@ -21,7 +22,7 @@ err_console = Console(stderr=True)
 def check(
     artifact_kind: str = typer.Argument(..., help="Artifact kind (e.g. user-story, spec)."),
     artifact_target: str = typer.Argument(..., help="Description of the artifact target."),
-    profile: str = typer.Option("default", "--profile", "-p"),
+    profile: str | None = typer.Option(None, "--profile", "-p"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     model_alias: str | None = typer.Option(None, "--model", "-m"),
     output_json: bool = typer.Option(False, "--json", help="Output as JSON."),
@@ -37,10 +38,11 @@ def check(
         raise typer.Exit(1)
 
     # Resolve profile and model
+    resolved_profile = profile or get_active_profile_name()
     try:
-        prof = load_profile(profile)
+        prof = load_profile(resolved_profile)
     except Exception:  # noqa: BLE001
-        err_console.print(f"[red]Profile {profile!r} not found.[/red]")
+        err_console.print(f"[red]Profile {resolved_profile!r} not found.[/red]")
         raise typer.Exit(1)  # noqa: B904
 
     # Use sufficiency model alias if set and no explicit override
@@ -67,11 +69,19 @@ def check(
         raise typer.Exit(1)  # noqa: B904
 
     if output_json:
-        console.print(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
         return
 
     # Pretty-print
     _render_report(report)
+
+    # D-036: when verdict is insufficient, point the user at the next command.
+    if report.verdict.value == "insufficient":
+        console.print(
+            f"[bold]Next:[/bold] run [cyan]praxis elicit --latest -e {eng_path}[/cyan] "
+            "to convert these gaps into open questions and stakeholder-targeted "
+            "drafted emails."
+        )
 
 
 def _render_report(report: object) -> None:

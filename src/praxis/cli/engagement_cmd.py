@@ -81,7 +81,7 @@ def glossary_list(
 
     if json_output:
         data = [t.model_dump(mode="json") for t in glossary.terms]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not glossary.terms:
@@ -195,7 +195,7 @@ def stakeholder_list(
 
     if json_output:
         data = [s.model_dump(mode="json") for s in slist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not slist:
@@ -315,7 +315,7 @@ def decision_list(
 
     if json_output:
         data = [d.model_dump(mode="json") for d in dlist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not dlist:
@@ -413,7 +413,7 @@ def question_list(
 
     if json_output:
         data = [q.model_dump(mode="json") for q in qlist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not qlist:
@@ -509,7 +509,7 @@ def system_list(
 
     if json_output:
         data = [s.model_dump(mode="json") for s in slist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not slist:
@@ -583,7 +583,7 @@ def risk_list(
 
     if json_output:
         data = [r.model_dump(mode="json") for r in rlist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not rlist:
@@ -687,7 +687,7 @@ def timeline_list(
 
     if json_output:
         data = [m.model_dump(mode="json") for m in mlist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not mlist:
@@ -771,7 +771,7 @@ def assumption_list(
 
     if json_output:
         data = [a.model_dump(mode="json") for a in alist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not alist:
@@ -862,7 +862,7 @@ def constraint_list(
 
     if json_output:
         data = [c.model_dump(mode="json") for c in clist]
-        console.print_json(json.dumps(data))
+        typer.echo(json.dumps(data))
         return
 
     if not clist:

@@ -84,6 +84,8 @@ class WorkQueueScreen(Screen[None]):
         table.add_columns("ID", "Priority", "Status", "Assignee", "Title")
         table.cursor_type = "row"
         self._load_items()
+        # D-044: auto-refresh as wake/elicit/commit changes the queue.
+        self._refresh_timer = self.set_interval(3.0, self._load_items)
 
     def _load_items(self) -> None:
         repo = WorkQueueRepo(self._engagement_path)

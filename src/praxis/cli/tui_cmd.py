@@ -53,6 +53,8 @@ def tui(
                             "backlog",
                             "config",
                             "setup",
+                            "priorities",
+                            "artifact_viewer",
                         ],
                     }
                 )

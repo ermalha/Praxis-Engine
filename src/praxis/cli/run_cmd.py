@@ -86,7 +86,7 @@ def wake(
     report = orch.wake_once(trigger=WakeTrigger.MANUAL, dry_run=dry_run)
 
     if output_json:
-        console.print(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
         return
 
     console.print(f"\n[bold]Wake Report[/bold] ({report.trigger.value})")
@@ -117,7 +117,7 @@ def plan_today(
     plan = generate_daily_plan(eng)
 
     if output_json:
-        console.print(json.dumps(plan.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(plan.model_dump(mode="json"), indent=2, default=str))
         return
 
     console.print(f"\n[bold]Daily Plan — {plan.date}[/bold]")
@@ -149,27 +149,49 @@ def status(
     output_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """Show engagement health snapshot."""
-    eng = _resolve_eng(engagement)
-
-    from praxis.engagement.repos.questions import OpenQuestionsRepo
-    from praxis.engagement.repos.stakeholders import StakeholderRepo
-    from praxis.workqueue import WorkQueueRepo, prioritize
-
-    # Gather data
-    q_repo = OpenQuestionsRepo(eng)
-    s_repo = StakeholderRepo(eng)
-    wq_repo = WorkQueueRepo(eng)
-
-    questions = q_repo.list_all()
-    stakeholders = s_repo.list_all()
-    all_items = wq_repo.list(limit=100)
-    human_items = [i for i in all_items if i.assignee == "human"]
-    active = [i for i in human_items if i.status.value in ("queued", "in_progress")]
-    ordered = prioritize(active, active_only=True)[:5]
-
-    # Recent wake report
     import contextlib
 
+    eng = _resolve_eng(engagement)
+
+    from praxis.config.loader import load_engagement_config
+    from praxis.engagement.repos.assumptions import AssumptionsConstraintsRepo
+    from praxis.engagement.repos.decisions import DecisionRepo
+    from praxis.engagement.repos.glossary import GlossaryRepo
+    from praxis.engagement.repos.questions import OpenQuestionsRepo
+    from praxis.engagement.repos.risks import RiskRepo
+    from praxis.engagement.repos.stakeholders import StakeholderRepo
+    from praxis.workqueue import WorkQueueRepo
+
+    # D-040: real engagement name from config (eng is the dir Path)
+    eng_name = eng.name
+    with contextlib.suppress(Exception):
+        eng_name = load_engagement_config(eng).name
+
+    # Gather state
+    q_repo = OpenQuestionsRepo(eng)
+    questions = q_repo.list_all()
+    open_qs = [q for q in questions if q.status in ("open", "asked")]
+    critical_open = sorted(
+        [q for q in open_qs if q.priority == "critical"],
+        key=lambda q: q.created_at,
+    )[:3]
+
+    stakeholders = StakeholderRepo(eng).list_all()
+    glossary = GlossaryRepo(eng).load().terms
+    decisions = DecisionRepo(eng).list_all()
+    ac_repo = AssumptionsConstraintsRepo(eng)
+    constraints = ac_repo.list_constraints()
+    assumptions = ac_repo.list_assumptions()
+    risks = RiskRepo(eng).list_all()
+
+    wq_repo = WorkQueueRepo(eng)
+    all_items = wq_repo.list(limit=200)
+    human_items = [i for i in all_items if i.assignee == "human"]
+    agent_items = [i for i in all_items if i.assignee == "agent"]
+    human_active = [i for i in human_items if i.status.value in ("queued", "in_progress")]
+    agent_active = [i for i in agent_items if i.status.value in ("queued", "in_progress")]
+
+    # Last wake report
     reports_dir = eng / ".praxis" / "state" / "wake-reports"
     last_wake = None
     if reports_dir.exists():
@@ -178,36 +200,75 @@ def status(
             with contextlib.suppress(json.JSONDecodeError, OSError):
                 last_wake = json.loads(files[0].read_text(encoding="utf-8"))
 
+    # Last sufficiency report (newest by generated_at; mtime fallback)
+    suff_dir = eng / ".praxis" / "state" / "sufficiency-reports"
+    last_sufficiency: dict[str, object] | None = None
+    if suff_dir.is_dir():
+        best: tuple[str, dict[str, object]] | None = None
+        for f in suff_dir.glob("*.json"):
+            with contextlib.suppress(json.JSONDecodeError, OSError, KeyError):
+                data = json.loads(f.read_text(encoding="utf-8"))
+                sort_key = str(data.get("generated_at") or f.stat().st_mtime)
+                if best is None or sort_key > best[0]:
+                    best = (sort_key, data)
+        if best is not None:
+            last_sufficiency = {
+                "verdict": best[1].get("verdict"),
+                "generated_at": best[1].get("generated_at"),
+                "artifact_kind": best[1].get("artifact_kind"),
+                "artifact_target": best[1].get("artifact_target"),
+            }
+
     if output_json:
         data = {
+            "name": eng_name,
             "stakeholders": len(stakeholders),
-            "questions_open": len([q for q in questions if q.status in ("open", "asked")]),
+            "glossary": len(glossary),
+            "decisions": len(decisions),
+            "constraints": len(constraints),
+            "assumptions": len(assumptions),
+            "risks": len(risks),
+            "questions_open": len(open_qs),
             "questions_total": len(questions),
-            "workitems_active": len(active),
-            "workitems_total": len(all_items),
+            "workitems_human_active": len(human_active),
+            "workitems_human_total": len(human_items),
+            "workitems_agent_active": len(agent_active),
+            "workitems_agent_total": len(agent_items),
             "last_wake": last_wake,
+            "last_sufficiency": last_sufficiency,
         }
-        console.print(json.dumps(data, indent=2, default=str))
+        typer.echo(json.dumps(data, indent=2, default=str))
         return
 
-    console.print(f"\n[bold]Engagement Status:[/bold] {eng.name}")
+    console.print(f"\n[bold]Engagement Status:[/bold] {eng_name}")
 
     table = Table()
     table.add_column("Metric", style="bold")
     table.add_column("Value")
 
     table.add_row("Stakeholders", str(len(stakeholders)))
-    open_qs = [q for q in questions if q.status in ("open", "asked")]
+    table.add_row("Glossary terms", str(len(glossary)))
+    table.add_row("Decisions", str(len(decisions)))
+    table.add_row("Constraints", str(len(constraints)))
+    table.add_row("Assumptions", str(len(assumptions)))
+    table.add_row("Risks", str(len(risks)))
     table.add_row("Open questions", f"{len(open_qs)} / {len(questions)}")
-    table.add_row("Active work-items", f"{len(active)} / {len(all_items)}")
+    table.add_row("Human work-items (active/total)", f"{len(human_active)} / {len(human_items)}")
+    table.add_row("Agent work-items (active/total)", f"{len(agent_active)} / {len(agent_items)}")
 
+    if last_sufficiency:
+        verdict = last_sufficiency.get("verdict") or "?"
+        when = last_sufficiency.get("generated_at") or "?"
+        table.add_row("Last sufficiency", f"{verdict} ({when})")
     if last_wake:
         table.add_row("Last wake", last_wake.get("started_at", "?"))
 
     console.print(table)
 
-    if ordered:
-        console.print("\n[bold]Top queue items:[/bold]")
-        for item in ordered:
-            console.print(f"  - [{item.priority.value.upper()}] {item.title}")
+    if critical_open:
+        from rich.markup import escape as rich_escape
+
+        console.print("\n[bold]Top critical open questions:[/bold]")
+        for q in critical_open:
+            console.print(f"  - {rich_escape(f'[{q.id}]')} {rich_escape(q.question)}")
     console.print()
