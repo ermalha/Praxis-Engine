@@ -77,6 +77,11 @@ def artifact_generate(
         return
     console.print(result.content)
     console.print(f"\n[green]Created artifact:[/green] {result.path}")
+    if result.sufficiency_verdict:
+        console.print(
+            f"[dim]Bound sufficiency report: {result.sufficiency_report_path} "
+            f"(verdict: {result.sufficiency_verdict})[/dim]"
+        )
 
 
 @artifact_app.command("list")
