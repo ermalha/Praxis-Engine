@@ -88,6 +88,15 @@ def artifact_generate(
 def artifact_list(
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     output_json: bool = typer.Option(False, "--json"),
+    profile: str | None = typer.Option(  # noqa: ARG001
+        None,
+        "--profile",
+        "-p",
+        help=(
+            "Accepted for CLI consistency with `artifact generate`; "
+            "unused (listing is a filesystem read)."
+        ),
+    ),
 ) -> None:
     """List generated artifacts."""
     eng = _resolve_engagement(engagement)
