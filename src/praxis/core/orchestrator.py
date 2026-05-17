@@ -21,8 +21,8 @@ from praxis.workqueue import (
     WorkQueueRepo,
 )
 
-from .wake.generators import gather_candidate_tasks
-from .wake.models import CandidateTask, WakeReport, WakeTrigger
+from .wake.generators import find_recent_state_changes, gather_candidate_tasks
+from .wake.models import CandidateTask, StateChange, WakeReport, WakeTrigger
 
 logger = structlog.get_logger()
 
@@ -90,8 +90,12 @@ class Orchestrator:
             )
             return report
 
-        # 1. Gather candidate tasks
-        candidates = gather_candidate_tasks(self._engagement_path, now=now)
+        # 1. Diff against prior wake (D-033) + gather candidate tasks
+        since = self._load_prior_wake_end()
+        state_changes_since_last_wake = find_recent_state_changes(
+            self._engagement_path, since=since
+        )
+        candidates = gather_candidate_tasks(self._engagement_path, now=now, since=since)
         tasks_considered = [c.description for c in candidates]
         state_changes = [c.task_type for c in candidates]
 
@@ -128,6 +132,7 @@ class Orchestrator:
             ended_at=ended_at,
             trigger=trigger,
             state_changes_observed=state_changes,
+            state_changes_since_last_wake=state_changes_since_last_wake,
             tasks_considered=tasks_considered,
             tasks_executed=tasks_executed,
             workitems_created=workitems_created,
@@ -254,6 +259,27 @@ class Orchestrator:
         repo.transition(wid, WorkItemStatus.IN_PROGRESS)
         return []
 
+    def _handle_state_change(self, task: CandidateTask) -> list[str]:
+        """Enqueue a review item for a state change observed since last wake (D-033)."""
+        change_data = task.metadata.get("change", {})
+        if not isinstance(change_data, dict):
+            return []
+        change = StateChange.model_validate(change_data)
+        repo = WorkQueueRepo(self._engagement_path)
+        item, was_created = repo.enqueue_deduped(
+            dedup_key=f"state_change:{change.entity_type}:{change.entity_id}:{change.change}",
+            type=WorkItemType.REVIEW_ARTIFACT,
+            assignee="agent",
+            title=task.description,
+            description=(
+                f"{change.entity_type} {change.entity_id} ({change.change}) — review impact on "
+                "engagement state and downstream artifacts."
+            ),
+            priority=WorkItemPriority.MEDIUM,
+            rationale=f"State change since last wake: {change.entity_type}.{change.change}",
+        )
+        return [item.id] if was_created else []
+
     # ------------------------------------------------------------------
     # Quiet hours
     # ------------------------------------------------------------------
@@ -285,6 +311,27 @@ class Orchestrator:
             encoding="utf-8",
         )
 
+    def _load_prior_wake_end(self) -> datetime | None:
+        """Return the ``ended_at`` of the most recent prior wake report, or ``None``.
+
+        Used by D-033 to diff engagement state against the prior wake cycle.
+        Returns ``None`` if no prior report exists or it is unreadable.
+        """
+        reports_dir = self._engagement_path / ".praxis" / "state" / "wake-reports"
+        if not reports_dir.is_dir():
+            return None
+        try:
+            files = sorted(reports_dir.glob("*.json"), key=lambda p: p.stat().st_mtime)
+        except OSError:
+            return None
+        if not files:
+            return None
+        try:
+            data = json.loads(files[-1].read_text(encoding="utf-8"))
+            return WakeReport.model_validate(data).ended_at
+        except (json.JSONDecodeError, OSError, ValueError):
+            return None
+
 
 # Handler dispatch table — maps task_type to unbound method
 _TASK_HANDLERS: dict[
@@ -296,4 +343,5 @@ _TASK_HANDLERS: dict[
     "empty_stakeholders": Orchestrator._handle_empty_stakeholders,
     "empty_risks": Orchestrator._handle_empty_risks,
     "agent_workitem": Orchestrator._handle_agent_workitem,
+    "state_change": Orchestrator._handle_state_change,
 }
