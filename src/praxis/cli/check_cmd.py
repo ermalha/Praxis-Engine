@@ -75,6 +75,14 @@ def check(
     # Pretty-print
     _render_report(report)
 
+    # D-036: when verdict is insufficient, point the user at the next command.
+    if report.verdict.value == "insufficient":
+        console.print(
+            f"[bold]Next:[/bold] run [cyan]praxis elicit --latest -e {eng_path}[/cyan] "
+            "to convert these gaps into open questions and stakeholder-targeted "
+            "drafted emails."
+        )
+
 
 def _render_report(report: object) -> None:
     """Pretty-print a SufficiencyReport."""
