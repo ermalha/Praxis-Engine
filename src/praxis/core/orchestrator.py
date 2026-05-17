@@ -186,7 +186,8 @@ class Orchestrator:
         """Create a follow-up work-item for a stalled question."""
         qid = str(task.metadata.get("question_id", ""))
         repo = WorkQueueRepo(self._engagement_path)
-        item = repo.enqueue(
+        item, was_created = repo.enqueue_deduped(
+            dedup_key=f"stalled_question:{qid}",
             type=WorkItemType.SEND_MESSAGE,
             assignee="human",
             title=f"Follow up on stalled question ({qid})",
@@ -197,12 +198,16 @@ class Orchestrator:
             ),
             related_question_ids=[qid] if qid else [],
         )
-        return [item.id]
+        return [item.id] if was_created else []
 
     def _handle_insufficient_artifact(self, task: CandidateTask) -> list[str]:
         """Create a work-item to re-evaluate an insufficient artifact."""
+        report_file = str(
+            task.metadata.get("report_file") or task.metadata.get("artifact_target") or "unknown"
+        )
         repo = WorkQueueRepo(self._engagement_path)
-        item = repo.enqueue(
+        item, was_created = repo.enqueue_deduped(
+            dedup_key=f"insufficient:{report_file}",
             type=WorkItemType.REVIEW_ARTIFACT,
             assignee="agent",
             title=f"Re-evaluate: {task.metadata.get('artifact_kind', 'artifact')}",
@@ -210,12 +215,13 @@ class Orchestrator:
             priority=WorkItemPriority.MEDIUM,
             rationale="Previous sufficiency check returned INSUFFICIENT",
         )
-        return [item.id]
+        return [item.id] if was_created else []
 
     def _handle_empty_stakeholders(self, _task: CandidateTask) -> list[str]:
         """Create an elicitation work-item for missing stakeholders."""
         repo = WorkQueueRepo(self._engagement_path)
-        item = repo.enqueue(
+        item, was_created = repo.enqueue_deduped(
+            dedup_key="empty:stakeholders",
             type=WorkItemType.CONDUCT_INTERVIEW,
             assignee="human",
             title="Identify stakeholders for the engagement",
@@ -223,12 +229,13 @@ class Orchestrator:
             priority=WorkItemPriority.HIGH,
             rationale="Engagement has no stakeholders registered",
         )
-        return [item.id]
+        return [item.id] if was_created else []
 
     def _handle_empty_risks(self, _task: CandidateTask) -> list[str]:
         """Create a work-item for missing risk identification."""
         repo = WorkQueueRepo(self._engagement_path)
-        item = repo.enqueue(
+        item, was_created = repo.enqueue_deduped(
+            dedup_key="empty:risks",
             type=WorkItemType.AGENT_FOLLOW_UP,
             assignee="agent",
             title="Identify risks for the engagement",
@@ -236,7 +243,7 @@ class Orchestrator:
             priority=WorkItemPriority.MEDIUM,
             rationale="Engagement has no risks registered",
         )
-        return [item.id]
+        return [item.id] if was_created else []
 
     def _handle_agent_workitem(self, task: CandidateTask) -> list[str]:
         """Transition an agent work-item to in-progress."""

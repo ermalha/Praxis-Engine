@@ -199,6 +199,68 @@ class WorkQueueRepo:
         self._save(updated)
         return updated
 
+    def _find_open_by_dedup_key(self, key: str) -> WorkItem | None:
+        """Find an OPEN (queued or in_progress) item whose payload[_dedup_key]==key.
+
+        Items in DONE / REJECTED / DEFERRED / SUPERSEDED are intentionally
+        ignored: closing an item lets the next enqueue with the same key
+        create a fresh one when warranted.
+        """
+        for status in (WorkItemStatus.QUEUED, WorkItemStatus.IN_PROGRESS):
+            for item in self.list(status=status, limit=1000):
+                if item.payload.get("_dedup_key") == key:
+                    return item
+        return None
+
+    def enqueue_deduped(
+        self,
+        *,
+        dedup_key: str,
+        type: WorkItemType,  # noqa: A002
+        assignee: str,
+        title: str,
+        description: str,
+        priority: WorkItemPriority = WorkItemPriority.MEDIUM,
+        payload: dict[str, object] | None = None,
+        rationale: str = "",
+        related_question_ids: builtins.list[str] | None = None,
+        related_stakeholder_ids: builtins.list[str] | None = None,
+        deadline: datetime | None = None,
+    ) -> tuple[WorkItem, bool]:
+        """Enqueue with dedup. Returns ``(item, was_created)``.
+
+        If an OPEN item already exists with the same ``dedup_key`` stored in
+        its ``payload._dedup_key``, that item is returned with
+        ``was_created=False`` and no new item is created (a
+        ``workitem.deduplicated`` audit event is emitted instead). Otherwise
+        a new item is created with ``_dedup_key`` injected into its payload.
+        """
+        existing = self._find_open_by_dedup_key(dedup_key)
+        if existing is not None:
+            emit(
+                "workitem.deduplicated",
+                component="workqueue",
+                subject_id=existing.id,
+                engagement_path=self._engagement_path,
+                dedup_key=dedup_key,
+            )
+            return existing, False
+
+        full_payload: dict[str, object] = {**(payload or {}), "_dedup_key": dedup_key}
+        item = self.enqueue(
+            type=type,
+            assignee=assignee,
+            title=title,
+            description=description,
+            priority=priority,
+            payload=full_payload,
+            rationale=rationale,
+            related_question_ids=related_question_ids,
+            related_stakeholder_ids=related_stakeholder_ids,
+            deadline=deadline,
+        )
+        return item, True
+
     def enqueue(
         self,
         *,
