@@ -206,19 +206,27 @@ class Orchestrator:
         return [item.id] if was_created else []
 
     def _handle_insufficient_artifact(self, task: CandidateTask) -> list[str]:
-        """Create a work-item to re-evaluate an insufficient artifact."""
+        """Enqueue an actionable elicit task for an insufficient artifact (D-034)."""
         report_file = str(
             task.metadata.get("report_file") or task.metadata.get("artifact_target") or "unknown"
         )
+        kind = str(task.metadata.get("artifact_kind", "artifact"))
+        target = str(task.metadata.get("artifact_target", ""))[:60]
         repo = WorkQueueRepo(self._engagement_path)
         item, was_created = repo.enqueue_deduped(
             dedup_key=f"insufficient:{report_file}",
-            type=WorkItemType.REVIEW_ARTIFACT,
+            type=WorkItemType.AGENT_FOLLOW_UP,
             assignee="agent",
-            title=f"Re-evaluate: {task.metadata.get('artifact_kind', 'artifact')}",
-            description=task.description,
+            title=f"Elicit drafts for {kind}: {target}",
+            description=(
+                f"Sufficiency check for {kind} '{target}' returned INSUFFICIENT. "
+                "Run `praxis elicit --latest -e <engagement>` to convert the gaps "
+                "into open questions and stakeholder-targeted email drafts. "
+                f"Report file: {report_file}"
+            ),
             priority=WorkItemPriority.MEDIUM,
-            rationale="Previous sufficiency check returned INSUFFICIENT",
+            payload={"sufficiency_report_file": report_file},
+            rationale="Sufficiency check returned INSUFFICIENT — needs elicitation",
         )
         return [item.id] if was_created else []
 

@@ -145,7 +145,9 @@ class TestWakeIdempotency:
         # Verify only one "Re-evaluate" item exists.
         repo = WorkQueueRepo(tmp_engagement)
         all_items = repo.list(limit=100)
-        review_items = [i for i in all_items if i.type == WorkItemType.REVIEW_ARTIFACT]
+        review_items = [
+            i for i in all_items if str(i.payload.get("_dedup_key", "")).startswith("insufficient:")
+        ]
         assert len(review_items) == 1
 
     def test_wake_after_commit_recreates(self, tmp_engagement: Path) -> None:
@@ -157,7 +159,9 @@ class TestWakeIdempotency:
 
         report1 = orch.wake_once(trigger=WakeTrigger.MANUAL)
         review_id = next(
-            i for i in repo.list(limit=100) if i.type == WorkItemType.REVIEW_ARTIFACT
+            i
+            for i in repo.list(limit=100)
+            if str(i.payload.get("_dedup_key", "")).startswith("insufficient:")
         ).id
         assert review_id in report1.workitems_created
 
@@ -170,7 +174,32 @@ class TestWakeIdempotency:
         new_review_items = [
             i
             for i in repo.list(limit=100)
-            if i.type == WorkItemType.REVIEW_ARTIFACT and i.id != review_id
+            if str(i.payload.get("_dedup_key", "")).startswith("insufficient:")
+            and i.id != review_id
         ]
         assert len(new_review_items) == 1
         assert new_review_items[0].id in report3.workitems_created
+
+    def test_insufficient_artifact_creates_elicit_task(self, tmp_engagement: Path) -> None:
+        """D-034: handler now enqueues an actionable AGENT_FOLLOW_UP elicit task,
+        not a vague REVIEW_ARTIFACT placeholder."""
+        init_engagement(tmp_engagement, "Test")
+        _write_insufficient_report(tmp_engagement, name="report-xyz")
+        orch = _make_orchestrator(tmp_engagement)
+
+        orch.wake_once(trigger=WakeTrigger.MANUAL)
+
+        repo = WorkQueueRepo(tmp_engagement)
+        elicit_items = [
+            i
+            for i in repo.list(limit=100)
+            if str(i.payload.get("_dedup_key", "")).startswith("insufficient:")
+        ]
+        assert len(elicit_items) == 1
+        item = elicit_items[0]
+        assert item.type == WorkItemType.AGENT_FOLLOW_UP
+        assert item.assignee == "agent"
+        assert item.title.startswith("Elicit drafts for")
+        assert "spec" in item.title  # the artifact_kind from the seeded report
+        assert item.payload.get("sufficiency_report_file") == "report-xyz.json"
+        assert "praxis elicit --latest" in item.description
