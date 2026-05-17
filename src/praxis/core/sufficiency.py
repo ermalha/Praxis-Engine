@@ -94,8 +94,8 @@ You MUST respond with a single JSON object matching this schema:
     {
       "need": "<what info is needed>",
       "status": "known" | "partial" | "unknown",
-      "have": "<what we know, or null>",
-      "missing": "<what is missing, or null>",
+      "have": "Answered by ADR-XXXX-... or constraint-id; brief summary",
+      "missing": "<what is still missing, or null>",
       "blocker": true | false,
       "candidate_sources": [
         {"kind": "stakeholder"|"artifact"|"external"|"registry",
@@ -108,6 +108,13 @@ You MUST respond with a single JSON object matching this schema:
   "reasoning": "<short explanation>",
   "elicitation_targets": ["<stakeholder-id>", ...]
 }
+
+When evaluating each information need, FIRST look at the Decisions and \
+Constraints in the engagement context. If a decision or constraint directly \
+answers a need, set status="known" and cite the relevant decision/constraint \
+ID(s) in `have`. If it partially answers, use "partial" and explain what's \
+still missing in `missing`. Only use "unknown" when nothing in the engagement \
+state addresses the need.
 
 Rules for the verdict:
 - "sufficient" — all information needs are KNOWN. recommended_action = "produce".
@@ -159,9 +166,24 @@ def _build_gate_prompt(
 # ---------------------------------------------------------------------------
 
 
+_DECISION_BODY_LIMIT = 300
+_DECISION_CONTEXT_LIMIT = 150
+_MAX_ASSUMPTIONS = 5
+
+
 def _collect_engagement_context(engagement_path: Path) -> str | None:
-    """Summarise available engagement data for the gate prompt."""
-    from praxis.engagement import GlossaryRepo, StakeholderRepo
+    """Summarise available engagement data for the gate prompt.
+
+    D-038: Decisions and constraints are included with full bodies (capped)
+    so the LLM can recognise when a persisted decision answers an
+    information need and cite the ID(s) in ``have``.
+    """
+    from praxis.engagement import (
+        AssumptionsConstraintsRepo,
+        DecisionRepo,
+        GlossaryRepo,
+        StakeholderRepo,
+    )
 
     parts: list[str] = []
 
@@ -171,6 +193,48 @@ def _collect_engagement_context(engagement_path: Path) -> str | None:
             lines = ["Known stakeholders:"]
             for s in stakeholders:
                 lines.append(f"  - {s.id}: {s.name} ({s.role})")
+            parts.append("\n".join(lines))
+    except Exception:  # noqa: BLE001
+        pass
+
+    # D-038: full decision bodies so the gate can credit decisions in `have`.
+    try:
+        decisions = sorted(
+            DecisionRepo(engagement_path).list_all(),
+            key=lambda d: d.created_at,
+            reverse=True,
+        )
+        if decisions:
+            lines = ["Decisions (cite IDs in `have` when they answer a need):"]
+            for d in decisions:
+                body = d.decision.strip().replace("\n", " ")
+                if len(body) > _DECISION_BODY_LIMIT:
+                    body = body[: _DECISION_BODY_LIMIT - 1] + "…"
+                ctx = d.context.strip().replace("\n", " ")
+                if len(ctx) > _DECISION_CONTEXT_LIMIT:
+                    ctx = ctx[: _DECISION_CONTEXT_LIMIT - 1] + "…"
+                lines.append(f"  - [{d.id}] {d.title} — {body} | context: {ctx}")
+            parts.append("\n".join(lines))
+    except Exception:  # noqa: BLE001
+        pass
+
+    # D-038: constraints with type + statement (not just count).
+    try:
+        ac_repo = AssumptionsConstraintsRepo(engagement_path)
+        constraints = ac_repo.list_constraints()
+        if constraints:
+            lines = ["Constraints (cite IDs in `have` when they bound a need):"]
+            for c in constraints:
+                lines.append(f"  - [{c.id}] ({c.constraint_type}) {c.statement}")
+            parts.append("\n".join(lines))
+
+        assumptions = sorted(ac_repo.list_assumptions(), key=lambda a: a.created_at, reverse=True)[
+            :_MAX_ASSUMPTIONS
+        ]
+        if assumptions:
+            lines = ["Recent assumptions:"]
+            for a in assumptions:
+                lines.append(f"  - [{a.id}] {a.statement}")
             parts.append("\n".join(lines))
     except Exception:  # noqa: BLE001
         pass
