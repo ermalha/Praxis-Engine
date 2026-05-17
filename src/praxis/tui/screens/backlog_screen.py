@@ -82,6 +82,8 @@ class BacklogScreen(Screen[None]):
         table.add_columns("Type", "Title", "Path")
         table.cursor_type = "row"
         self._load_entries()
+        # D-044: auto-refresh as the agent generates new artifacts.
+        self._refresh_timer = self.set_interval(3.0, self._load_entries)
 
     def _load_entries(self) -> None:
         self._entries = self._discover_artifacts()
