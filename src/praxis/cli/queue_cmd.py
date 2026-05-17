@@ -169,7 +169,7 @@ def queue_done(
 @queue_app.command("commit")
 def queue_commit(
     item_id: str = typer.Argument(...),
-    note: str = typer.Option("Committed", "--note", "-n"),
+    note: str = typer.Option("Committed", "--note", "--message", "-n", "-m"),
     result: str | None = typer.Option(None, "--result"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
 ) -> None:
