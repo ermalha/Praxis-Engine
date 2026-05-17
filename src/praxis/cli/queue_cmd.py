@@ -33,20 +33,46 @@ def _resolve_eng(engagement: str | None) -> Path:
 @queue_app.callback(invoke_without_command=True)
 def queue_default(
     ctx: typer.Context,
-    all_items: bool = typer.Option(False, "--all", help="Show all items."),
+    all_items: bool = typer.Option(
+        False,
+        "--all",
+        help="Include done/rejected items (status filter; default shows active only).",
+    ),
+    assignee: str | None = typer.Option(
+        None,
+        "--assignee",
+        help="Filter by assignee: 'human' or 'agent' (default: all assignees).",
+    ),
+    human_only: bool = typer.Option(
+        False,
+        "--human-only",
+        help="Shorthand for --assignee human (restores pre-D-031 default behavior).",
+    ),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     output_json: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Show prioritized work-queue (default: human items only)."""
+    """Show prioritized work-queue (default: all assignees, active items only)."""
     if ctx.invoked_subcommand is not None:
         return
+
+    if assignee is not None and assignee not in ("human", "agent"):
+        err_console.print(
+            f"[red]Invalid --assignee value: {assignee!r}. Allowed: human, agent.[/red]"
+        )
+        raise typer.Exit(1)
+
+    effective_assignee: str | None = None
+    if human_only:
+        effective_assignee = "human"
+    elif assignee is not None:
+        effective_assignee = assignee
 
     eng = _resolve_eng(engagement)
     repo = WorkQueueRepo(eng)
     items = repo.list(limit=100)
 
-    if not all_items:
-        items = [i for i in items if i.assignee == "human"]
+    if effective_assignee is not None:
+        items = [i for i in items if i.assignee == effective_assignee]
 
     ordered = prioritize(items, active_only=not all_items)
 
