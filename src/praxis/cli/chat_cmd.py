@@ -11,6 +11,7 @@ from praxis.config.engagement import find_engagement
 from praxis.config.profiles import get_active_profile_name
 from praxis.core.chat_runtime import ChatRuntime
 from praxis.core.models import StreamEvent
+from praxis.safety import warn_on_pii
 from praxis.tools.models import ApprovalDecision
 from praxis.tools.registry import ToolSpec
 
@@ -78,6 +79,9 @@ def chat(
                 if not result.continue_session:
                     break
                 continue
+
+            # D-043: warn (don't block) on PII-looking input before sending.
+            warn_on_pii(user_input)
 
             # Stream the response
             for event in runtime.stream_turn(user_input):
