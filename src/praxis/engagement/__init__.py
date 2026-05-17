@@ -2,6 +2,7 @@
 
 # Auto-register engagement tools when the package is imported
 import praxis.engagement.tools as _tools  # noqa: F401
+from praxis.engagement.digest import build_engagement_digest
 from praxis.engagement.models import (
     Assumption,
     AssumptionsAndConstraints,
@@ -58,4 +59,5 @@ __all__ = [
     "SystemLandscapeRepo",
     "Timeline",
     "TimelineRepo",
+    "build_engagement_digest",
 ]
