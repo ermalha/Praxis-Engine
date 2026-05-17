@@ -99,7 +99,9 @@ class TestWakeStateDiff:
         assert len(state_change_items) == 1
 
     def test_wake_notices_answered_question(self, tmp_engagement: Path) -> None:
-        """Question status open→answered surfaces in next wake's diff."""
+        """Question status open→answered surfaces in next wake's diff.
+        D-039: the wake-generated review item links back to the question via
+        ``related_question_ids``."""
         init_engagement(tmp_engagement, "Test")
         qrepo = OpenQuestionsRepo(tmp_engagement)
         q = qrepo.open(
@@ -122,6 +124,16 @@ class TestWakeStateDiff:
         ]
         assert len(answered_changes) == 1
         assert answered_changes[0].entity_id == q.id
+
+        # D-039: the wake-generated review item carries the question ID.
+        repo = WorkQueueRepo(tmp_engagement)
+        question_items = [
+            i
+            for i in repo.list(limit=100)
+            if str(i.payload.get("_dedup_key", "")).startswith(f"state_change:question:{q.id}")
+        ]
+        assert len(question_items) == 1
+        assert question_items[0].related_question_ids == [q.id]
 
     def test_state_change_dedup_across_wakes(self, tmp_engagement: Path) -> None:
         """A state change that already produced a review item doesn't pile up."""
