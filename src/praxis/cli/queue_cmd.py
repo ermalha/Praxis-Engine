@@ -51,9 +51,7 @@ def queue_default(
     ordered = prioritize(items, active_only=not all_items)
 
     if output_json:
-        console.print(
-            json.dumps([i.model_dump(mode="json") for i in ordered], indent=2, default=str)
-        )
+        typer.echo(json.dumps([i.model_dump(mode="json") for i in ordered], indent=2, default=str))
         return
 
     if not ordered:

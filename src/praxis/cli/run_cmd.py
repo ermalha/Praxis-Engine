@@ -86,7 +86,7 @@ def wake(
     report = orch.wake_once(trigger=WakeTrigger.MANUAL, dry_run=dry_run)
 
     if output_json:
-        console.print(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(report.model_dump(mode="json"), indent=2, default=str))
         return
 
     console.print(f"\n[bold]Wake Report[/bold] ({report.trigger.value})")
@@ -117,7 +117,7 @@ def plan_today(
     plan = generate_daily_plan(eng)
 
     if output_json:
-        console.print(json.dumps(plan.model_dump(mode="json"), indent=2, default=str))
+        typer.echo(json.dumps(plan.model_dump(mode="json"), indent=2, default=str))
         return
 
     console.print(f"\n[bold]Daily Plan — {plan.date}[/bold]")
@@ -187,7 +187,7 @@ def status(
             "workitems_total": len(all_items),
             "last_wake": last_wake,
         }
-        console.print(json.dumps(data, indent=2, default=str))
+        typer.echo(json.dumps(data, indent=2, default=str))
         return
 
     console.print(f"\n[bold]Engagement Status:[/bold] {eng.name}")

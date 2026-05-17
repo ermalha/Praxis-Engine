@@ -98,7 +98,7 @@ def elicit(
         raise typer.Exit(1)  # noqa: B904
 
     if output_json:
-        console.print(
+        typer.echo(
             json.dumps(
                 [d.model_dump(mode="json") for d in drafts],
                 indent=2,
