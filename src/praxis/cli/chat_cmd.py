@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from praxis.config.engagement import find_engagement
+from praxis.config.profiles import get_active_profile_name
 from praxis.core.chat_runtime import ChatRuntime
 from praxis.core.models import StreamEvent
 from praxis.tools.models import ApprovalDecision
@@ -30,11 +31,12 @@ def _cli_approval(spec: ToolSpec, args: dict[str, object]) -> ApprovalDecision:
 
 
 def chat(
-    profile: str = typer.Option("default", "--profile", "-p"),
+    profile: str | None = typer.Option(None, "--profile", "-p"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     model_alias: str | None = typer.Option(None, "--model", "-m"),
 ) -> None:
     """Start an interactive chat session with the Praxis agent."""
+    resolved_profile = profile or get_active_profile_name()
     eng_path: Path | None = (
         Path(engagement) if engagement is not None else find_engagement(Path.cwd())
     )
@@ -45,7 +47,7 @@ def chat(
 
     try:
         runtime = ChatRuntime.create(
-            profile_name=profile,
+            profile_name=resolved_profile,
             engagement_path=eng_path,
             model_alias=model_alias,
             approval_callback=_cli_approval,

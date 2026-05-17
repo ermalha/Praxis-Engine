@@ -11,6 +11,7 @@ from rich.console import Console
 from praxis.artifacts import generate_artifact, list_artifacts
 from praxis.config.engagement import find_engagement
 from praxis.config.loader import load_profile, resolve_model_config
+from praxis.config.profiles import get_active_profile_name
 from praxis.transport import make_transport
 
 artifact_app = typer.Typer(name="artifact", help="Generate and inspect artifacts.")
@@ -51,14 +52,15 @@ def _resolve_engagement(engagement: str | None) -> Path:
 def artifact_generate(
     kind: str = typer.Argument(..., help="scope-brief, backlog, traceability, or custom kind."),
     prompt: str | None = typer.Option(None, "--prompt", help="Custom artifact prompt."),
-    profile: str = typer.Option("default", "--profile", "-p"),
+    profile: str | None = typer.Option(None, "--profile", "-p"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     model_alias: str | None = typer.Option(None, "--model", "-m"),
     output_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """Generate an artifact from persisted engagement state and print its path."""
     eng = _resolve_engagement(engagement)
-    prof = load_profile(profile)
+    resolved_profile = profile or get_active_profile_name()
+    prof = load_profile(resolved_profile)
     model_config = resolve_model_config(prof, None, model_alias)
     transport = make_transport(model_config)
     result = generate_artifact(

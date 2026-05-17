@@ -11,6 +11,7 @@ from rich.table import Table
 
 from praxis.config.engagement import find_engagement
 from praxis.config.loader import load_profile, resolve_model_config
+from praxis.config.profiles import get_active_profile_name
 from praxis.transport.factory import make_transport
 
 console = Console()
@@ -20,7 +21,7 @@ err_console = Console(stderr=True)
 def elicit(
     report_id: str = typer.Argument(None, help="Sufficiency report ID (or prefix). Use --latest."),
     latest: bool = typer.Option(False, "--latest", help="Use the latest report."),
-    profile: str = typer.Option("default", "--profile", "-p"),
+    profile: str | None = typer.Option(None, "--profile", "-p"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
     model_alias: str | None = typer.Option(None, "--model", "-m"),
     max_drafts: int = typer.Option(5, "--max-drafts", "-n"),
@@ -66,10 +67,11 @@ def elicit(
     report = SufficiencyReport.model_validate(report_data)
 
     # Resolve profile/model
+    resolved_profile = profile or get_active_profile_name()
     try:
-        prof = load_profile(profile)
+        prof = load_profile(resolved_profile)
     except Exception:  # noqa: BLE001
-        err_console.print(f"[red]Profile {profile!r} not found.[/red]")
+        err_console.print(f"[red]Profile {resolved_profile!r} not found.[/red]")
         raise typer.Exit(1)  # noqa: B904
 
     effective_alias = model_alias or prof.sufficiency_gate_model_alias

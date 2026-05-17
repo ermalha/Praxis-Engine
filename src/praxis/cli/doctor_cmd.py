@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from praxis.config import load_profile, resolve_model_config
+from praxis.config.profiles import get_active_profile_name
 from praxis.errors import ConfigError, TransportError
 from praxis.transport import make_transport
 
@@ -16,11 +17,12 @@ doctor_app = typer.Typer(name="doctor", help="Diagnose configuration and connect
 
 @doctor_app.callback(invoke_without_command=True)
 def doctor(
-    profile: str = typer.Option("default", "--profile", "-p", help="Profile to check."),
+    profile: str | None = typer.Option(None, "--profile", "-p", help="Profile to check."),
 ) -> None:
     """Check profile model config and probe the resolved transport."""
+    resolved_profile = profile or get_active_profile_name()
     try:
-        prof = load_profile(profile)
+        prof = load_profile(resolved_profile)
     except ConfigError as exc:
         console.print(f"[red]Config error:[/red] {exc}")
         raise typer.Exit(1) from exc
