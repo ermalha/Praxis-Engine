@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 
 from praxis.cli import app
 from praxis.config.engagement import init_engagement
+from praxis.tui.screens.artifact_viewer_screen import ArtifactViewerScreen
 from praxis.tui.screens.backlog_screen import BacklogScreen
 from praxis.tui.screens.priorities_screen import PrioritiesScreen
 from praxis.tui.screens.queue_screen import WorkQueueScreen
@@ -82,6 +83,25 @@ class TestPrioritiesScreen:
         assert "Insufficient artifacts" in screen._render_insufficient_artifacts()
 
 
+class TestArtifactViewerScreen:
+    def test_has_refresh_binding(self) -> None:
+        assert _has_binding(ArtifactViewerScreen, "r", "refresh")
+
+    def test_has_refresh_action(self) -> None:
+        assert callable(getattr(ArtifactViewerScreen, "action_refresh", None))
+
+    def test_on_mount_installs_interval(self) -> None:
+        src = inspect.getsource(ArtifactViewerScreen.on_mount)
+        assert "set_interval" in src
+        assert "_load_entries" in src
+
+    def test_discover_artifacts_empty_engagement(self, tmp_engagement: Path) -> None:
+        """D-046: filesystem discovery tolerates an engagement with no artifacts."""
+        init_engagement(tmp_engagement, "Test")
+        screen = ArtifactViewerScreen(tmp_engagement)
+        assert screen._discover_artifacts() == []
+
+
 class TestSmokeStillPasses:
     def test_tui_smoke_loads_with_refresh_screens(self, tmp_engagement: Path) -> None:
         """Regression: D-044/045 changes don't break the smoke loader."""
@@ -103,3 +123,20 @@ class TestSmokeStillPasses:
         assert result.exit_code == 0, result.output
         assert '"priorities"' in result.output
         assert '"initial_screen": "priorities"' in result.output
+
+    def test_artifact_viewer_in_smoke_available_screens(self, tmp_engagement: Path) -> None:
+        init_engagement(tmp_engagement, "Test")
+        result = runner.invoke(
+            app,
+            [
+                "tui",
+                "--smoke",
+                "--screen",
+                "artifact_viewer",
+                "-e",
+                str(tmp_engagement),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert '"artifact_viewer"' in result.output
+        assert '"initial_screen": "artifact_viewer"' in result.output
