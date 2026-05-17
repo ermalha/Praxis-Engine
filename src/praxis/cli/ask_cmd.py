@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 
 from praxis.config import load_profile, resolve_model_config
+from praxis.config.profiles import get_active_profile_name
 from praxis.engagement import build_engagement_digest
 from praxis.errors import ConfigError, StorageError, TransportError
 from praxis.transport import ChatRequest, Message, make_transport
@@ -27,7 +28,7 @@ _GUARD_INSTRUCTIONS = (
 
 def ask(
     question: str = typer.Argument(..., help="The question to ask the LLM."),
-    profile: str = typer.Option("default", "--profile", "-p", help="Profile to use."),
+    profile: str | None = typer.Option(None, "--profile", "-p", help="Profile to use."),
     engagement: str | None = typer.Option(
         None,
         "--engagement",
@@ -40,8 +41,9 @@ def ask(
     ),
 ) -> None:
     """Send a one-shot question to the resolved LLM and print the response."""
+    resolved_profile = profile or get_active_profile_name()
     try:
-        prof = load_profile(profile)
+        prof = load_profile(resolved_profile)
         model_config = resolve_model_config(prof)
     except ConfigError as exc:
         err_console.print(f"[red]Config error:[/red] {exc}")
