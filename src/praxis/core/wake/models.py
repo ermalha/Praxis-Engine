@@ -32,6 +32,18 @@ class CandidateTask(BaseModel):
     metadata: dict[str, object] = {}
 
 
+class StateChange(BaseModel):
+    """A change to engagement state observed between two wake cycles."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    entity_type: Literal["decision", "constraint", "assumption", "risk", "question"]
+    entity_id: str
+    change: Literal["created", "answered"]
+    title: str
+    timestamp: datetime
+
+
 class WakeReport(BaseModel):
     """Summary of a single wake-cycle execution."""
 
@@ -42,6 +54,7 @@ class WakeReport(BaseModel):
     ended_at: datetime
     trigger: WakeTrigger
     state_changes_observed: list[str] = []
+    state_changes_since_last_wake: list[StateChange] = []
     tasks_considered: list[str] = []
     tasks_executed: list[str] = []
     workitems_created: list[str] = []
