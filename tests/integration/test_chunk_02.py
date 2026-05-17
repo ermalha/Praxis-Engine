@@ -63,7 +63,7 @@ def test_version_still_works() -> None:
     """Regression: version command from chunk 01 still works."""
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "praxis 0.2.1" in result.output
+    assert "praxis 0.3.0" in result.output
 
 
 def test_init_duplicate_engagement_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
