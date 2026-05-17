@@ -6,11 +6,12 @@ Structured, immutable audit logging to JSONL files and SQLite.
 from .context import AuditContext, get_audit_context, set_audit_context
 from .models import AuditEvent
 from .reader import query, tail
-from .writer import emit
+from .writer import counted, emit
 
 __all__ = [
     "AuditContext",
     "AuditEvent",
+    "counted",
     "emit",
     "get_audit_context",
     "query",

@@ -10,6 +10,10 @@ from __future__ import annotations
 
 import os
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -22,6 +26,41 @@ from praxis.audit.models import AuditEvent
 logger = structlog.get_logger(component="audit")
 
 _DEFAULT_HOME = Path.home() / ".praxis"
+
+
+# ---------------------------------------------------------------------------
+# Event counter (D-035) — callers that want to know how many audit events
+# their code emitted in a block (e.g. WakeReport.audit_event_count) wrap the
+# block in ``with counted() as c: ...`` and read ``c.value`` afterward.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _EventCounter:
+    """Counts audit events emitted while a :func:`counted` block is active."""
+
+    value: int = 0
+
+
+_active_counter: ContextVar[_EventCounter | None] = ContextVar(
+    "_praxis_audit_active_counter", default=None
+)
+
+
+@contextmanager
+def counted() -> Iterator[_EventCounter]:
+    """Context manager that counts ``emit()`` calls in the enclosed block.
+
+    Nested blocks: the inner counter replaces the outer for its duration;
+    the outer resumes after the inner exits. Suitable for top-level use
+    (e.g. ``Orchestrator.wake_once``).
+    """
+    counter = _EventCounter()
+    token = _active_counter.set(counter)
+    try:
+        yield counter
+    finally:
+        _active_counter.reset(token)
 
 
 def emit(
@@ -98,6 +137,12 @@ def emit(
             _mirror_to_sqlite(db_path, event)
 
     logger.debug("audit.emitted", event_type=event_type, event_id=event.event_id)
+
+    # D-035: increment any active counter so callers can report telemetry.
+    active_ctr = _active_counter.get()
+    if active_ctr is not None:
+        active_ctr.value += 1
+
     return event
 
 
