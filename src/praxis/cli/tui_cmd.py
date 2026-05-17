@@ -53,6 +53,7 @@ def tui(
                             "backlog",
                             "config",
                             "setup",
+                            "priorities",
                         ],
                     }
                 )
