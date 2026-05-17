@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,6 +22,48 @@ from praxis.transport import ChatRequest, Message, Transport
 from .models import ArtifactResult
 
 _ARTIFACT_DIRS = ("stories", "specs", "reports", "matrices")
+
+# D-037: artifact_kind (generate) → artifact_kind (check). Unknown kinds match
+# their own name (exact). Extend here when adding new artifact kinds.
+_ARTIFACT_TO_CHECK_KIND = {
+    "scope-brief": "spec",
+    "backlog": "backlog",
+    "traceability": "traceability",
+}
+
+
+def _find_latest_sufficiency_for(
+    engagement_path: Path, artifact_kind: str
+) -> tuple[str, Path] | None:
+    """Return ``(verdict, report_path)`` for the most recent matching sufficiency
+    report, or ``None`` if no report matches.
+
+    Matching: report's ``artifact_kind`` must equal the value mapped via
+    ``_ARTIFACT_TO_CHECK_KIND`` (or the artifact_kind itself if not mapped).
+    "Most recent" uses the report's ``generated_at`` field; file mtime is a
+    fallback if the field is absent or unreadable.
+    """
+    target_kind = _ARTIFACT_TO_CHECK_KIND.get(artifact_kind, artifact_kind)
+    reports_dir = engagement_path / ".praxis" / "state" / "sufficiency-reports"
+    if not reports_dir.is_dir():
+        return None
+
+    best: tuple[str, str, Path] | None = None  # (sort_key, verdict, path)
+    for report_file in reports_dir.glob("*.json"):
+        with contextlib.suppress(json.JSONDecodeError, OSError, KeyError):
+            data = json.loads(report_file.read_text(encoding="utf-8"))
+            if data.get("artifact_kind") != target_kind:
+                continue
+            verdict = data.get("verdict")
+            if not isinstance(verdict, str):
+                continue
+            sort_key = str(data.get("generated_at") or report_file.stat().st_mtime)
+            if best is None or sort_key > best[0]:
+                best = (sort_key, verdict, report_file.resolve())
+
+    if best is None:
+        return None
+    return best[1], best[2]
 
 
 def generate_artifact(
@@ -54,11 +98,14 @@ def generate_artifact(
         path=str(resolved),
         profile=profile.name,
     )
+    binding = _find_latest_sufficiency_for(engagement_path, artifact_kind)
     return ArtifactResult(
         artifact_kind=artifact_kind,
         path=resolved,
         content=content,
         created_at=now,
+        sufficiency_verdict=binding[0] if binding else None,
+        sufficiency_report_path=binding[1] if binding else None,
     )
 
 
