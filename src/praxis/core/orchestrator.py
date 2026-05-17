@@ -10,6 +10,7 @@ from pathlib import Path
 
 import structlog
 
+from praxis.audit import counted as audit_counted
 from praxis.audit import emit
 from praxis.config.models import EngagementConfig, ProfileConfig, WakeCycleMode
 from praxis.core.agent import Agent
@@ -90,41 +91,52 @@ class Orchestrator:
             )
             return report
 
-        # 1. Diff against prior wake (D-033) + gather candidate tasks
-        since = self._load_prior_wake_end()
-        state_changes_since_last_wake = find_recent_state_changes(
-            self._engagement_path, since=since
-        )
-        candidates = gather_candidate_tasks(self._engagement_path, now=now, since=since)
-        tasks_considered = [c.description for c in candidates]
-        state_changes = [c.task_type for c in candidates]
+        # D-035: count audit events emitted during the wake cycle
+        with audit_counted() as event_counter:
+            # 1. Diff against prior wake (D-033) + gather candidate tasks
+            since = self._load_prior_wake_end()
+            state_changes_since_last_wake = find_recent_state_changes(
+                self._engagement_path, since=since
+            )
+            candidates = gather_candidate_tasks(self._engagement_path, now=now, since=since)
+            tasks_considered = [c.description for c in candidates]
+            state_changes = [c.task_type for c in candidates]
 
-        # 2. Pick top K
-        selected = candidates[: self._top_k]
+            # 2. Pick top K
+            selected = candidates[: self._top_k]
 
-        # 3. Execute
-        tasks_executed: list[str] = []
-        workitems_created: list[str] = []
-        tokens_used = 0
+            # 3. Execute
+            tasks_executed: list[str] = []
+            workitems_created: list[str] = []
+            tokens_used = 0
 
-        for task in selected:
-            if tokens_used >= self._token_budget:
-                emit(
-                    "wake.budget_exceeded",
-                    component="orchestrator",
-                    engagement_path=self._engagement_path,
-                    tokens_used=tokens_used,
-                    budget=self._token_budget,
-                )
-                break
+            for task in selected:
+                if tokens_used >= self._token_budget:
+                    emit(
+                        "wake.budget_exceeded",
+                        component="orchestrator",
+                        engagement_path=self._engagement_path,
+                        tokens_used=tokens_used,
+                        budget=self._token_budget,
+                    )
+                    break
 
-            if dry_run:
-                tasks_executed.append(f"[dry-run] {task.description}")
-                continue
+                if dry_run:
+                    tasks_executed.append(f"[dry-run] {task.description}")
+                    continue
 
-            created_ids = self._execute_task(task)
-            tasks_executed.append(task.description)
-            workitems_created.extend(created_ids)
+                created_ids = self._execute_task(task)
+                tasks_executed.append(task.description)
+                workitems_created.extend(created_ids)
+
+            emit(
+                "wake.completed",
+                component="orchestrator",
+                engagement_path=self._engagement_path,
+                trigger=trigger.value,
+                tasks_executed=len(tasks_executed),
+                workitems_created=len(workitems_created),
+            )
 
         ended_at = datetime.now(UTC)
         report = WakeReport(
@@ -136,20 +148,12 @@ class Orchestrator:
             tasks_considered=tasks_considered,
             tasks_executed=tasks_executed,
             workitems_created=workitems_created,
+            audit_event_count=event_counter.value,
             tokens_used=tokens_used,
         )
 
         if not dry_run:
             self._persist_report(report)
-
-        emit(
-            "wake.completed",
-            component="orchestrator",
-            engagement_path=self._engagement_path,
-            trigger=trigger.value,
-            tasks_executed=len(tasks_executed),
-            workitems_created=len(workitems_created),
-        )
 
         return report
 

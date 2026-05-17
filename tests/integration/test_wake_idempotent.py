@@ -139,8 +139,13 @@ class TestWakeIdempotency:
 
         # First wake creates items for the insufficient report + empty-areas.
         assert len(report1.workitems_created) >= 1
+        # D-035: audit_event_count reflects real emits (>= workitem.created
+        # for each item + at least the wake.completed event).
+        assert report1.audit_event_count > 0
         # Second wake creates NOTHING new — everything is already enqueued.
         assert report2.workitems_created == []
+        # D-035: even a no-op wake emits at least wake.completed (+ deduplicated).
+        assert report2.audit_event_count > 0
 
         # Verify only one "Re-evaluate" item exists.
         repo = WorkQueueRepo(tmp_engagement)
