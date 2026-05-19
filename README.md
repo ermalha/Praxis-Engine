@@ -1,4 +1,5 @@
-<img width="660" height="572" alt="image" src="https://github.com/user-attachments/assets/e5a3fe29-eb33-4c24-b410-6dfd5705247d" />
+<img width="478" height="296" alt="image" src="https://github.com/user-attachments/assets/20942de3-057a-4c5b-9ad6-541b9b88cd45" />
+
 
 
 > An open-source, **agent-led** framework for IT business analysis.
