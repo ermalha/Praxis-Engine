@@ -61,6 +61,8 @@ uv sync --extra dev --extra all
 The whole flow, from zero to a usable engagement, in about a dozen commands.
 
 ### 1. Create a profile
+<img width="1882" height="619" alt="image" src="https://github.com/user-attachments/assets/02269fa1-77c7-4a9b-baa6-474f2517fb47" />
+
 
 A profile pairs a name with an LLM model and the env var holding its key.
 The actual key never lives in config — only the env var **name** does.
