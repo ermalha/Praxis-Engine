@@ -1,4 +1,5 @@
-# Praxis
+<img width="660" height="572" alt="image" src="https://github.com/user-attachments/assets/e5a3fe29-eb33-4c24-b410-6dfd5705247d" />
+
 
 > An open-source, **agent-led** framework for IT business analysis.
 
