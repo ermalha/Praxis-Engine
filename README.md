@@ -63,6 +63,7 @@ uv sync --extra dev --extra all
 ## The analytical loop
 
 Praxis runs the analytical loop a business / functional analyst runs manually — but as software, on persistent state, with an audit trail.
+
             <img width="698" height="672" alt="image" src="https://github.com/user-attachments/assets/03c8a7ee-b19f-4030-ba11-c0302d7d96fd" />
 
 
