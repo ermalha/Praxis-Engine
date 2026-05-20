@@ -60,6 +60,48 @@ uv sync --extra dev --extra all
 
 ## Five-minute tour
 
+## The analytical loop
+
+Praxis runs the analytical loop a business / functional analyst runs manually — but as software, on persistent state, with an audit trail.
+
+```mermaid
+flowchart TD
+    A[<b>1. Capture</b><br/><i>Engagement state</i>]
+    B[<b>2. Ask or target</b><br/><i>Question or artifact</i>]
+    C{<b>3. Check</b><br/><i>Sufficiency gate</i>}
+    D[<b>4a. Produce</b><br/><i>Artifact bound to evidence</i>]
+    E[<b>4b. Elicit</b><br/><i>Drafts and queued questions</i>]
+    F[<b>5. Record state</b><br/><i>Decisions, answers, audit</i>]
+    G[<b>6. Wake cycle</b><br/><i>Review, dedup, auto-elicit</i>]
+
+    A --> B
+    B --> C
+    C -->|sufficient| D
+    C -->|insufficient| E
+    D --> F
+    E --> F
+    F --> G
+    G -. feedback — back to step 2 .-> B
+
+    classDef capture  fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A
+    classDef ask      fill:#E6F1FB,stroke:#185FA5,color:#042C53
+    classDef check    fill:#EEEDFE,stroke:#534AB7,color:#26215C
+    classDef produce  fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    classDef elicit   fill:#FAEEDA,stroke:#854F0B,color:#412402
+    classDef record   fill:#EEEDFE,stroke:#534AB7,color:#26215C
+    classDef wake     fill:#FAECE7,stroke:#993C1D,color:#4A1B0C
+
+    class A capture
+    class B ask
+    class C check
+    class D produce
+    class E elicit
+    class F record
+    class G wake
+
+    linkStyle 7 stroke:#534AB7,stroke-width:2px
+```
+
 The whole flow, from zero to a usable engagement, in about a dozen commands.
 
 ### 1. Create a profile
