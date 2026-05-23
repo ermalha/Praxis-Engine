@@ -10,6 +10,7 @@ from pathlib import Path
 
 from praxis.audit import emit
 from praxis.config.models import ProfileConfig
+from praxis.storage.files import atomic_write_text
 from praxis.transport import ChatRequest, Message, Transport
 
 from .models import ArtifactResult
@@ -81,7 +82,10 @@ def generate_artifact(
     content = response.content
     directory = _safe_artifact_dir(engagement_path, output_dir)
     path = directory / f"{_slug(artifact_kind)}-{now.strftime('%Y%m%dT%H%M%SZ')}.md"
-    path.write_text(content, encoding="utf-8")
+    # D-060: atomic write — generated artifacts are the analyst's deliverable;
+    # a process kill mid-write would leave a truncated Markdown file that
+    # ``artifact list`` would still surface as valid.
+    atomic_write_text(path, content)
     resolved = path.resolve()
     emit(
         "artifact.created",

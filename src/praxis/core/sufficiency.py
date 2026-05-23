@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 
 from praxis.audit import emit
 from praxis.errors import SufficiencyError
+from praxis.storage.files import atomic_write_text
 from praxis.transport.base import Transport
 from praxis.transport.models import ChatRequest, Message
 
@@ -248,7 +249,10 @@ def _persist_report(
     filename = f"{report_id}.json"
     path = reports_dir / filename
 
-    path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    # D-060: atomic write — sufficiency reports are part of the audit/evidence
+    # trail; a partial write would corrupt the report for downstream binding
+    # (D-037) and elicitation (D-034).
+    atomic_write_text(path, report.model_dump_json(indent=2))
     return path
 
 
