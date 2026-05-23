@@ -45,10 +45,14 @@ class WorkQueueRepo:
         """Insert a new work-item."""
         payload = item.model_dump(mode="json")
         try:
+            # D-058: assignee is now a real indexed column so list() can filter
+            # in SQL (was filtered in Python AFTER LIMIT, silently
+            # under-reporting). The migration backfills legacy rows from
+            # payload_json.
             self._conn.execute(
                 "INSERT INTO workitems (id, type, status, priority, payload_json, "
-                "created_at, updated_at, deadline, completed_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "created_at, updated_at, deadline, completed_at, assignee) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item.id,
                     item.type.value,
@@ -59,6 +63,7 @@ class WorkQueueRepo:
                     item.updated_at.isoformat(),
                     item.deadline.isoformat() if item.deadline else None,
                     item.completed_at.isoformat() if item.completed_at else None,
+                    item.assignee,
                 ),
             )
             self._conn.commit()
@@ -107,17 +112,19 @@ class WorkQueueRepo:
             query += " AND priority = ?"
             params.append(priority.value)
 
+        # D-058: assignee filter applied in SQL, BEFORE LIMIT. Previously
+        # filtered in Python after LIMIT, which silently returned fewer
+        # results than existed when the first N rows ORDER BY created_at
+        # DESC happened to be a different assignee.
+        if assignee is not None:
+            query += " AND assignee = ?"
+            params.append(assignee)
+
         query += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
 
         rows = self._conn.execute(query, params).fetchall()
-        items = [self._row_to_workitem(r) for r in rows]
-
-        # Filter by assignee in Python (stored in payload_json)
-        if assignee is not None:
-            items = [i for i in items if i.assignee == assignee]
-
-        return items
+        return [self._row_to_workitem(r) for r in rows]
 
     def transition(
         self,
