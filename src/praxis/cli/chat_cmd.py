@@ -34,9 +34,22 @@ def _cli_approval(spec: ToolSpec, args: dict[str, object]) -> ApprovalDecision:
 def chat(
     profile: str | None = typer.Option(None, "--profile", "-p"),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
-    model_alias: str | None = typer.Option(None, "--model", "-m"),
+    model_alias: str | None = typer.Option(None, "--model"),
+    message: str | None = typer.Option(
+        None,
+        "--message",
+        "-m",
+        help="Run a single non-interactive chat turn and exit. "
+        "Useful for scripting / CI; the REPL is skipped entirely.",
+    ),
 ) -> None:
-    """Start an interactive chat session with the Praxis agent."""
+    """Start an interactive chat session with the Praxis agent.
+
+    With ``--message/-m`` the REPL is skipped: one turn is processed and
+    the runtime closes. ``--model`` no longer has a short alias (was
+    ``-m`` in v0.3.x) so that ``-m`` can carry the message, matching
+    ``git commit -m`` / ``praxis queue commit -m`` convention.
+    """
     resolved_profile = profile or get_active_profile_name()
     eng_path: Path | None = (
         Path(engagement) if engagement is not None else find_engagement(Path.cwd())
@@ -58,6 +71,18 @@ def chat(
         raise typer.Exit(1) from None
 
     sid = runtime.start()
+
+    # D-050: non-interactive single-turn mode. Skip the REPL banner + loop;
+    # the caller wants one response and an exit code.
+    if message is not None:
+        warn_on_pii(message)
+        try:
+            for event in runtime.stream_turn(message):
+                _render_event(event)
+        finally:
+            runtime.close()
+        return
+
     console.print(f"[dim]Session: {sid[:12]}… | /help for commands[/dim]")
     eng_name = runtime.engagement.name if runtime.engagement else "none"
     console.print(f"[dim]Engagement: {eng_name}[/dim]\n")
