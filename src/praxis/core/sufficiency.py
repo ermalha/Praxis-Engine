@@ -184,7 +184,16 @@ def _collect_engagement_context(engagement_path: Path) -> str | None:
 
     try:
         snapshot = build_engagement_snapshot(engagement_path)
-    except Exception:  # noqa: BLE001 — gate must keep working even with a partial engagement
+    except Exception as exc:  # noqa: BLE001 — gate must keep working
+        # D-061: don't degrade silently. Log it so the operator can see
+        # "the gate ran but its prompt had no engagement context because
+        # the snapshot failed" instead of silently producing a worse verdict.
+        logger.warning(
+            "sufficiency.snapshot_build_failed",
+            engagement_path=str(engagement_path),
+            error=str(exc),
+            exc_info=True,
+        )
         return None
 
     rendered = render_snapshot_for_llm(snapshot, purpose="sufficiency")
