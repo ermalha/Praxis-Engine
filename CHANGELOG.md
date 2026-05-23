@@ -7,6 +7,73 @@ and Praxis adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.3.1] — 2026-05-23
+
+**Theme:** Automation patch + adoption walkthrough.
+
+A small follow-up release closing the one finding surfaced during the
+v0.3.0 retest (RW-019) plus the two adoption-friction items called out
+by the Hermes external audit. No runtime-behavior changes beyond the
+structlog routing fix; the rest is install path, documentation, and
+verification.
+
+### Fixed
+
+- **D-047** — Configure structlog at package import: route console
+  output to stderr (`PrintLoggerFactory(file=sys.stderr)`), filter at
+  WARNING level by default, opt-in DEBUG via `PRAXIS_DEBUG=1`. The
+  default factory previously wrote to stdout, which corrupted
+  `praxis ... --json | jq` pipelines whenever an audit event fired.
+  Audit JSONL on-disk writes are unaffected — those use direct file
+  opens, not structlog. Closes **RW-019**.
+
+### Added
+
+- **D-048** — README now leads with a one-command install:
+  `uv tool install --python 3.12 "praxis-ba[all] @ git+...@v0.3.1"`.
+  Drops `praxis` onto your PATH in an isolated environment. The
+  `git clone + uv sync` form is retained as "Development install."
+  A real PyPI publish is queued for a future release.
+- **D-049** — New `docs/how-to/first-engagement.md` — a full
+  setup-to-output walkthrough (~540 lines) verified by cold-run on a
+  fresh sandbox. Every output block is real captured stdout, not
+  hand-written. Documents the actual `.praxis/` layout
+  (`config.yaml` + `engagement/` subdir), the 5-column sufficiency
+  table including the `Blocker` column, and the full timestamp in the
+  status snapshot's `Last sufficiency` value.
+
+### Changed
+
+- **D-049** — README's "Five-minute tour" (~140 lines of step-by-step
+  commands) replaced with a 22-line "Quick start" that links to the
+  new how-to. The logo, analytical-loop diagram, and TUI gallery are
+  retained at their original positions.
+- **D-049** — `CONTRIBUTING.md` adds a "must remain runnable" line
+  pointing at the new how-to; CI exercises the non-LLM steps on every
+  push (`tests/integration/test_tour_offline.py`, 7 tests).
+
+### Quality
+
+- **539 tests passing** (+10 since v0.3.0), coverage **84.39%**.
+- All four gates green per commit: `pytest`, `ruff check`,
+  `ruff format`, `mypy --strict src/praxis`.
+- 7 conventional commits since v0.3.0 (D-047 / D-049 ×3 / D-048 +
+  one image-restoration commit + version bump).
+
+### Known limitations / deferred work
+
+- Real `pip install praxis-ba` from PyPI is still queued (D-048
+  Option A); the `uv tool install` form documented here is the
+  supported one-command install path until then.
+- The how-to's LLM-using steps (ask, check, elicit, artifact generate)
+  are exercised by the documented cold-run procedure, not by CI.
+- All Hermes-review items that aren't part of v0.3.1 (architectural
+  hardening — TUI wake plumbing, EngagementSnapshot read model, atomic
+  writes, real Textual pilot tests, etc.) are queued for v1.0.0 (see
+  the v1.0.0 plan in the eval workspace).
+
+---
+
 ## [0.3.0] — 2026-05-17
 
 **Theme:** Agent-led, end-to-end + live TUI workspace.
