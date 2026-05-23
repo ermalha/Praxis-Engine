@@ -12,6 +12,7 @@ import structlog
 
 from praxis.errors import TransportError
 from praxis.transport.base import Transport, _check_cancel
+from praxis.transport.errors import translate_provider_exception
 from praxis.transport.models import (
     ChatRequest,
     Message,
@@ -97,7 +98,12 @@ class OpenAITransport(Transport):
         except TransportError:
             raise
         except Exception as exc:
-            raise TransportError(f"OpenAI API call failed: {exc}", provider=self.name) from exc
+            raise translate_provider_exception(
+                exc,
+                provider=self.name,
+                model=self._model,
+                api_key_env=self._api_key_env,
+            ) from exc
         try:
             for chunk in response:
                 _check_cancel(cancel_event)
@@ -107,7 +113,13 @@ class OpenAITransport(Transport):
         except TransportError:
             raise
         except Exception as exc:
-            raise TransportError(f"OpenAI stream error: {exc}", provider=self.name) from exc
+            raise translate_provider_exception(
+                exc,
+                provider=self.name,
+                model=self._model,
+                api_key_env=self._api_key_env,
+                fallback_message="{provider_title} stream error: {detail}",
+            ) from exc
         finally:
             if hasattr(response, "close"):
                 response.close()
