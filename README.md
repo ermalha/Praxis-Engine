@@ -46,15 +46,31 @@ and the per-feature briefs are in `chunks/`. Track progress in
 |---|---|---|
 | Python | 3.11+ | required |
 | [uv](https://docs.astral.sh/uv/) | latest | package manager |
-| git | any | for source install |
 | LLM API key | — | Anthropic, OpenAI, or OpenRouter (skip for local/offline) |
 
+**Recommended — single command, pinned to a tagged release:**
+
 ```bash
-# From source (until PyPI publish)
+uv tool install --python 3.12 \
+  "praxis-ba[all] @ git+https://github.com/ermalha/Praxis-Engine.git@v0.3.0"
+praxis version    # → praxis 0.3.0
+```
+
+This drops `praxis` onto your `PATH` in an isolated environment. Replace
+`@v0.3.0` with whatever release tag you want; `git+...@main` works too for
+the development tip.
+
+**Development install (clone + uv sync):**
+
+```bash
 git clone https://github.com/ermalha/Praxis-Engine.git
 cd Praxis-Engine
 uv sync --extra dev --extra all
 ```
+
+A real `pip install praxis-ba` from PyPI is planned for a future release;
+the `uv tool install` form above is the supported one-command path until
+then.
 
 ---
 
