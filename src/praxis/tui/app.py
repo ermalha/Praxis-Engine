@@ -127,9 +127,13 @@ class PraxisApp(App[None]):
             from praxis.core.wake.models import WakeTrigger
 
             eng_config = load_engagement_config(self._engagement_path)
-            profile = load_profile("default")
+            # D-057: honor the profile the app was launched with, not a
+            # hard-coded "default". Previous behaviour silently woke under
+            # the wrong profile when the user passed ``praxis tui --profile
+            # alt-profile``.
+            profile = load_profile(self._profile_name)
             orch = Orchestrator(
-                agent=None,  # type: ignore[arg-type]
+                agent=None,
                 profile=profile,
                 engagement=eng_config,
                 engagement_path=self._engagement_path,

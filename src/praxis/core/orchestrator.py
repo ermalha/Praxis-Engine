@@ -40,7 +40,7 @@ class Orchestrator:
 
     def __init__(
         self,
-        agent: Agent,
+        agent: Agent | None,
         profile: ProfileConfig,
         engagement: EngagementConfig,
         engagement_path: Path,
@@ -48,6 +48,10 @@ class Orchestrator:
         top_k: int = _DEFAULT_TOP_K,
         token_budget: int = _DEFAULT_TOKEN_BUDGET,
     ) -> None:
+        # D-057: wake handlers in v0.x are rule-based and don't call the LLM,
+        # so ``agent`` is optional today. The field is kept for forward-compat
+        # with inline-LLM wake handlers (a candidate for v1.x once the
+        # EngagementSnapshot read model lands — see v1.0.0 plan D-059).
         self._agent = agent
         self._profile = profile
         self._engagement = engagement
