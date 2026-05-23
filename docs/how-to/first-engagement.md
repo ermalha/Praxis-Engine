@@ -506,6 +506,36 @@ Real output:
 
 ---
 
+## Scripting and CI — non-interactive `chat`
+
+`praxis chat` is interactive by default (REPL). For CI pipelines,
+one-shot agentic queries, or anywhere you want the chat runtime's tools
++ session machinery without the prompt loop, use `--message/-m`:
+
+```bash
+uv run praxis chat -e . -m "Summarize the open critical questions"
+```
+
+This runs **one turn** through the same `ChatRuntime` the REPL uses,
+streams the response to stdout, closes the runtime, and exits 0. The
+REPL banner is suppressed so stdout stays parseable for downstream
+tools. The PII guard still fires (`PRAXIS_PII_GUARD=off` to silence).
+
+Difference vs. `ask`:
+
+|  | `praxis ask -e . "..."` | `praxis chat -m "..." -e .` |
+|---|---|---|
+| Runtime | Stateless single LLM call | Full `ChatRuntime` (tools, session, slash) |
+| Tool execution | None | Yes — agent can call engagement / queue tools |
+| Session record | None | Persists to `.praxis/state/praxis.db` |
+| Use when | Quick question against engagement state | Single-shot but needs tool access or auditable session |
+
+Note: `chat --model` no longer has a `-m` short alias as of v0.4.0
+(use the full `--model gpt-4.1` form). `-m` now carries the message,
+matching `git commit -m` / `praxis queue commit -m` convention.
+
+---
+
 ## What's next
 
 You've completed the full Praxis pipeline once. The engagement model

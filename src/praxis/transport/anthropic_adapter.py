@@ -13,6 +13,7 @@ import structlog
 
 from praxis.errors import TransportError
 from praxis.transport.base import Transport, _check_cancel
+from praxis.transport.errors import translate_provider_exception
 from praxis.transport.models import (
     ChatRequest,
     ContentBlock,
@@ -100,7 +101,12 @@ class AnthropicTransport(Transport):
         except TransportError:
             raise
         except Exception as exc:
-            raise TransportError(f"Anthropic API error: {exc}", provider="anthropic") from exc
+            raise translate_provider_exception(
+                exc,
+                provider="anthropic",
+                model=self._model,
+                api_key_env=self._api_key_env,
+            ) from exc
 
     def supports_tools(self) -> bool:
         return True

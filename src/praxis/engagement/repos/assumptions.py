@@ -79,6 +79,106 @@ class AssumptionsConstraintsRepo:
         emit("constraint.added", subject_id=cid, statement=statement)
         return c
 
+    # ---------------------------------------------------------------
+    # D-052 — assumption get / update / remove
+    # ---------------------------------------------------------------
+
+    def get_assumption(self, aid: str) -> Assumption:
+        """Return the assumption with id *aid*, or raise EngagementError."""
+        for a in self.load().assumptions:
+            if a.id == aid:
+                return a
+        raise EngagementError(f"Assumption {aid!r} not found", id=aid)
+
+    def update_assumption(
+        self,
+        aid: str,
+        *,
+        statement: str | None = None,
+        rationale: str | None = None,
+        validation_method: str | None = None,
+    ) -> Assumption:
+        """Update mutable fields on an assumption. Only non-None args are written."""
+        data = self.load()
+        for i, a in enumerate(data.assumptions):
+            if a.id == aid:
+                updates: dict[str, object] = {}
+                if statement is not None:
+                    updates["statement"] = statement
+                if rationale is not None:
+                    updates["rationale"] = rationale
+                if validation_method is not None:
+                    updates["validation_method"] = validation_method
+                if not updates:
+                    return a
+                updated = a.model_copy(update=updates)
+                data.assumptions[i] = updated
+                self._save(data)
+                emit("assumption.updated", subject_id=aid, fields=sorted(updates))
+                return updated
+        raise EngagementError(f"Assumption {aid!r} not found", id=aid)
+
+    def remove_assumption(self, aid: str) -> None:
+        """Remove the assumption with id *aid*, or raise EngagementError."""
+        data = self.load()
+        for i, a in enumerate(data.assumptions):
+            if a.id == aid:
+                del data.assumptions[i]
+                self._save(data)
+                emit("assumption.removed", subject_id=aid)
+                return
+        raise EngagementError(f"Assumption {aid!r} not found", id=aid)
+
+    # ---------------------------------------------------------------
+    # D-052 — constraint get / update / remove
+    # ---------------------------------------------------------------
+
+    def get_constraint(self, cid: str) -> Constraint:
+        """Return the constraint with id *cid*, or raise EngagementError."""
+        for c in self.load().constraints:
+            if c.id == cid:
+                return c
+        raise EngagementError(f"Constraint {cid!r} not found", id=cid)
+
+    def update_constraint(
+        self,
+        cid: str,
+        *,
+        statement: str | None = None,
+        constraint_type: str | None = None,
+        source: str | None = None,
+    ) -> Constraint:
+        """Update mutable fields on a constraint. Only non-None args are written."""
+        data = self.load()
+        for i, c in enumerate(data.constraints):
+            if c.id == cid:
+                updates: dict[str, object] = {}
+                if statement is not None:
+                    updates["statement"] = statement
+                if constraint_type is not None:
+                    updates["constraint_type"] = constraint_type
+                if source is not None:
+                    updates["source"] = source
+                if not updates:
+                    return c
+                updated = c.model_copy(update=updates)
+                data.constraints[i] = updated
+                self._save(data)
+                emit("constraint.updated", subject_id=cid, fields=sorted(updates))
+                return updated
+        raise EngagementError(f"Constraint {cid!r} not found", id=cid)
+
+    def remove_constraint(self, cid: str) -> None:
+        """Remove the constraint with id *cid*, or raise EngagementError."""
+        data = self.load()
+        for i, c in enumerate(data.constraints):
+            if c.id == cid:
+                del data.constraints[i]
+                self._save(data)
+                emit("constraint.removed", subject_id=cid)
+                return
+        raise EngagementError(f"Constraint {cid!r} not found", id=cid)
+
     def validate_assumption(self, aid: str) -> Assumption:
         """Mark an assumption as validated."""
         data = self.load()

@@ -7,6 +7,90 @@ and Praxis adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.4.0] — 2026-05-23
+
+**Theme:** Adoption surface — scriptable chat, friendlier errors, completed CRUD.
+
+Three focused features that close the v0.4.0 Tier 2 plan (D-050 / D-051 /
+D-052). All three target adoption: making the CLI usable from scripts /
+CI, making transport failures self-actionable, and completing the gaps
+in the engagement-entity verbs that previous releases left behind.
+
+### Added
+
+- **D-050** — `praxis chat --message/-m "..."` runs **one** turn through
+  the full `ChatRuntime` (tools, session, slash commands) and exits 0.
+  The REPL banner is suppressed so stdout stays clean for callers piping
+  into `jq` or similar. PII guard (D-043) still fires on the single
+  turn. Difference vs. `praxis ask`: `chat -m` keeps the runtime, so the
+  agent can call engagement / queue tools; `ask` is stateless.
+- **D-052** — Completed CRUD verbs on `praxis engagement assumption`
+  and `praxis engagement constraint`:
+  - `assumption get|update|remove`
+  - `constraint get|update|remove`
+
+  Updates are partial (only supplied flags are written) and preserve
+  untouched fields including the `validated` flag on assumptions. Both
+  `get` variants support `--json` for scripting. Closes **NEW-001**.
+- **D-052** — `praxis engagement question open` now accepts
+  `--answerers <stakeholder-ids>` and `--blocks <artifact-ids>` (both
+  comma-separated). The repo accepted these fields since 0.2.x; only
+  the CLI binding was missing. Closes **NEW-004**.
+
+### Changed
+
+- **D-051** — Transport errors are now provider-specific and actionable.
+  New `praxis.transport.errors.translate_provider_exception()` duck-types
+  on `type(exc).__module__` + class name (both OpenAI and Anthropic
+  SDKs share the Stainless-generated exception hierarchy) and maps each
+  kind to a tailored message:
+
+  - `auth`         → names the env var to set
+  - `permission`   → names the model the key lacks access to
+  - `rate_limit`   → suggests retry / tier upgrade
+  - `not_found`    → names the missing model
+  - `bad_request`  → carries the SDK's detail
+  - `server_error` → tells the user to retry later
+  - `connection`   → blames the network with the SDK's detail
+  - `timeout`      → identifies a timed-out request
+
+  Each `TransportError` carries `details["kind"]` so future retry logic
+  can branch programmatically without string-matching. Unknown
+  exceptions fall through to today's generic message — behaviour is
+  **strictly additive**, no existing assertion breaks. Closes
+  **NEW-003**.
+
+### Breaking (CLI)
+
+- **D-050** — `praxis chat --model` no longer accepts the `-m` short
+  alias. `-m` is now bound to `--message`, matching `git commit -m` and
+  `praxis queue commit -m` convention. The full `--model gpt-4.1`
+  long form still works. `--model -m` is intact on `artifact`, `check`,
+  and `elicit` (those have no `--message` conflict).
+
+### Documentation
+
+- **D-050** — `docs/how-to/first-engagement.md` gains a "Scripting and
+  CI" section with a `chat -m` vs `ask` comparison table.
+
+### Quality
+
+- **571 tests passing** (+32 since v0.3.1), coverage **84.42%**.
+- All four gates green per commit: `pytest`, `ruff check`,
+  `ruff format`, `mypy --strict src/praxis`.
+- 5 conventional commits since v0.3.1 (D-050 ×2 / D-051 / D-052 + bump).
+
+### Known limitations / deferred to v1.0.0
+
+- **D-055** — Multi-engagement awareness (`praxis engagements list/
+  show/switch`, registry, TUI header) deferred. Larger feature; queued
+  for a dedicated cycle.
+- **D-053 / D-054 / D-056** — Superseded by v1.0.0 plan items
+  (D-067 TUI regenerate, D-062 pilot tests, D-066 `doctor` expansion).
+  See `~/praxis-realworld-eval/v1.0.0-plan.md` in the eval workspace.
+
+---
+
 ## [0.3.1] — 2026-05-23
 
 **Theme:** Automation patch + adoption walkthrough.

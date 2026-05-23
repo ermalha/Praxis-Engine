@@ -437,14 +437,34 @@ def question_open(
     question: str = typer.Argument(..., help="The question."),
     why: str = typer.Option(..., "--why", help="Why it matters."),
     priority: str = typer.Option("medium", "--priority", "-p"),
+    answerers: str | None = typer.Option(
+        None,
+        "--answerers",
+        help="Comma-separated stakeholder IDs who could answer this.",
+    ),
+    blocks: str | None = typer.Option(
+        None,
+        "--blocks",
+        help="Comma-separated artifact IDs this question blocks.",
+    ),
     engagement: str | None = typer.Option(None, "--engagement", "-e"),
 ) -> None:
     """Open a new tracked question."""
     eng = _resolve_engagement(engagement)
+    candidate_answerers = (
+        [s.strip() for s in answerers.split(",") if s.strip()] if answerers else None
+    )
+    blocked_artifacts = [b.strip() for b in blocks.split(",") if b.strip()] if blocks else None
     with _audit_ctx(eng):
         repo = OpenQuestionsRepo(eng)
         try:
-            q = repo.open(question, why, priority=priority)
+            q = repo.open(
+                question,
+                why,
+                priority=priority,
+                candidate_answerers=candidate_answerers,
+                blocks=blocked_artifacts,
+            )
         except EngagementError as exc:
             err_console.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
@@ -841,6 +861,79 @@ def assumption_invalidate(
         console.print(f"[green]Invalidated assumption {rich_escape(f'[{a.id}]')}.[/green]")
 
 
+@assumption_app.command("get")
+@handle_praxis_errors
+def assumption_get(
+    aid: str = typer.Argument(..., help="Assumption ID."),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Show details for a single assumption."""
+    eng = _resolve_engagement(engagement)
+    repo = AssumptionsConstraintsRepo(eng)
+    try:
+        a = repo.get_assumption(aid)
+    except EngagementError as exc:
+        err_console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    if json_output:
+        typer.echo(json.dumps(a.model_dump(mode="json")))
+        return
+
+    console.print(f"[bold]Assumption {rich_escape(f'[{a.id}]')}[/bold]")
+    console.print(f"  Statement: {a.statement}")
+    if a.rationale:
+        console.print(f"  Rationale: {a.rationale}")
+    if a.validation_method:
+        console.print(f"  Validation method: {a.validation_method}")
+    console.print(f"  Validated: {'yes' if a.validated else 'no'}")
+
+
+@assumption_app.command("update")
+@handle_praxis_errors
+def assumption_update(
+    aid: str = typer.Argument(..., help="Assumption ID."),
+    statement: str | None = typer.Option(None, "--statement"),
+    rationale: str | None = typer.Option(None, "--rationale", "-r"),
+    validation_method: str | None = typer.Option(None, "--validation-method"),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Update mutable fields on an assumption. Only supplied flags are written."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        try:
+            a = repo.update_assumption(
+                aid,
+                statement=statement,
+                rationale=rationale,
+                validation_method=validation_method,
+            )
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Updated assumption {rich_escape(f'[{a.id}]')}.[/green]")
+
+
+@assumption_app.command("remove")
+@handle_praxis_errors
+def assumption_remove(
+    aid: str = typer.Argument(..., help="Assumption ID."),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Remove an assumption."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        try:
+            repo.remove_assumption(aid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Removed assumption {rich_escape(f'[{aid}]')}.[/green]")
+
+
 # ---------------------------------------------------------------------------
 # Constraints
 # ---------------------------------------------------------------------------
@@ -894,3 +987,73 @@ def constraint_add(
         repo = AssumptionsConstraintsRepo(eng)
         c = repo.add_constraint(statement, constraint_type, source=source)
         console.print(f"[green]Added constraint {rich_escape(f'[{c.id}]')}.[/green]")
+
+
+@constraint_app.command("get")
+@handle_praxis_errors
+def constraint_get(
+    cid: str = typer.Argument(..., help="Constraint ID."),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Show details for a single constraint."""
+    eng = _resolve_engagement(engagement)
+    repo = AssumptionsConstraintsRepo(eng)
+    try:
+        c = repo.get_constraint(cid)
+    except EngagementError as exc:
+        err_console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    if json_output:
+        typer.echo(json.dumps(c.model_dump(mode="json")))
+        return
+
+    console.print(f"[bold]Constraint {rich_escape(f'[{c.id}]')}[/bold]")
+    console.print(f"  Statement: {c.statement}")
+    console.print(f"  Type: {c.constraint_type}")
+    console.print(f"  Source: {c.source or '-'}")
+
+
+@constraint_app.command("update")
+@handle_praxis_errors
+def constraint_update(
+    cid: str = typer.Argument(..., help="Constraint ID."),
+    statement: str | None = typer.Option(None, "--statement"),
+    constraint_type: str | None = typer.Option(None, "--type"),
+    source: str | None = typer.Option(None, "--source", "-s"),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Update mutable fields on a constraint. Only supplied flags are written."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        try:
+            c = repo.update_constraint(
+                cid,
+                statement=statement,
+                constraint_type=constraint_type,
+                source=source,
+            )
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Updated constraint {rich_escape(f'[{c.id}]')}.[/green]")
+
+
+@constraint_app.command("remove")
+@handle_praxis_errors
+def constraint_remove(
+    cid: str = typer.Argument(..., help="Constraint ID."),
+    engagement: str | None = typer.Option(None, "--engagement", "-e"),
+) -> None:
+    """Remove a constraint."""
+    eng = _resolve_engagement(engagement)
+    with _audit_ctx(eng):
+        repo = AssumptionsConstraintsRepo(eng)
+        try:
+            repo.remove_constraint(cid)
+        except EngagementError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        console.print(f"[green]Removed constraint {rich_escape(f'[{cid}]')}.[/green]")
