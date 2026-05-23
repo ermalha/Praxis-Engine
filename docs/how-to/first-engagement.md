@@ -61,6 +61,8 @@ Profile 'alice' created.
   Auto-set as default profile (only profile).
 ```
 
+<img width="1882" height="619" alt="praxis profile create — terminal output" src="https://github.com/user-attachments/assets/02269fa1-77c7-4a9b-baa6-474f2517fb47" />
+
 Two design choices worth knowing:
 
 - **The API key never lives in config.** Only the environment-variable
