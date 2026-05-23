@@ -32,7 +32,7 @@ default surface is a work-queue and a typed engagement model — not a chat box.
 
 ## Status
 
-**Latest release: [v0.3.0](https://github.com/ermalha/Praxis-Engine/releases/tag/v0.3.0)** — agent-led, end-to-end, with a live TUI workspace.
+**Latest release: [v0.3.1](https://github.com/ermalha/Praxis-Engine/releases/tag/v0.3.1)** — automation patch + adoption walkthrough. Built on v0.3.0's agent-led pipeline and live TUI workspace.
 
 Active development. The build plan is in `PROJECT.md` (architecture & principles)
 and the per-feature briefs are in `chunks/`. Track progress in
@@ -46,159 +46,61 @@ and the per-feature briefs are in `chunks/`. Track progress in
 |---|---|---|
 | Python | 3.11+ | required |
 | [uv](https://docs.astral.sh/uv/) | latest | package manager |
-| git | any | for source install |
 | LLM API key | — | Anthropic, OpenAI, or OpenRouter (skip for local/offline) |
 
+**Recommended — single command, pinned to a tagged release:**
+
 ```bash
-# From source (until PyPI publish)
+uv tool install --python 3.12 \
+  "praxis-ba[all] @ git+https://github.com/ermalha/Praxis-Engine.git@v0.3.1"
+praxis version    # → praxis 0.3.1
+```
+
+This drops `praxis` onto your `PATH` in an isolated environment. Replace
+`@v0.3.1` with whatever release tag you want; `git+...@main` works too for
+the development tip.
+
+**Development install (clone + uv sync):**
+
+```bash
 git clone https://github.com/ermalha/Praxis-Engine.git
 cd Praxis-Engine
 uv sync --extra dev --extra all
 ```
 
+A real `pip install praxis-ba` from PyPI is planned for a future release;
+the `uv tool install` form above is the supported one-command path until
+then.
+
 ---
 
-## Five-minute tour
-
-## The analytical loop
+## Quick start
 
 Praxis runs the analytical loop a business / functional analyst runs manually — but as software, on persistent state, with an audit trail.
 
   <img width="698" height="672" alt="image" src="https://github.com/user-attachments/assets/bd514ba3-0460-4a39-a84c-149c9a5c8dc6" />
-            
 
-
-The whole flow, from zero to a usable engagement, in about a dozen commands.
-
-### 1. Create a profile
-<img width="1882" height="619" alt="image" src="https://github.com/user-attachments/assets/02269fa1-77c7-4a9b-baa6-474f2517fb47" />
-
-
-A profile pairs a name with an LLM model and the env var holding its key.
-The actual key never lives in config — only the env var **name** does.
+Three commands to get a first working engagement:
 
 ```bash
+# 1. Create a profile (binds a name → provider + model + API-key env var)
 export OPENAI_API_KEY=sk-...
 uv run praxis profile create alice \
   --provider openai --model gpt-4.1 --api-key-env OPENAI_API_KEY
-# Auto-set as default profile (only profile).
-```
 
-### 2. Initialize an engagement
-
-```bash
+# 2. Initialize a new engagement in the current directory
 mkdir my-project && cd my-project
 uv run praxis init --name "Acme Loan Intake" --methodology agile
-```
 
-### 3. Seed core state
-
-```bash
-uv run praxis engagement stakeholder add "Alice Chen" "VP of Lending"
-uv run praxis engagement glossary    add "Member" "A credit-union customer."
-uv run praxis engagement constraint  add "Must comply with GLBA." regulatory
-uv run praxis engagement risk        add "Vendor sandbox delay" \
-   "Core banking sandbox takes 2 weeks" -i medium -l medium
-```
-
-### 4. Ask the engagement-aware agent
-
-`praxis ask -e .` primes the LLM with your engagement state (decisions,
-constraints, open questions, stakeholders) and asks it to flag gaps rather
-than invent. If the answer depends on facts not in your state, Praxis names
-the gap and proposes the question to ask.
-
-```bash
+# 3. Ask the engagement-aware agent. The -e . flag primes it with your
+#    engagement state and instructs the model to flag uncertainty rather
+#    than invent. Try a real question:
 uv run praxis ask -e . "Should we save partial application progress automatically?"
 ```
 
-> _Sample response (truncated):_
->
-> > Based on the engagement, there is no explicit decision or constraint about auto-save. **Stakeholders to consult:** Devon Price (Product Manager); Alice Chen (VP of Lending). **Proposed Open Question:** "Should the MVP support autosaving partial application progress, and allow members to resume from a different device?"
+From here the full pipeline is: seed engagement state → `check` (sufficiency gate) → `elicit` (gap-driven stakeholder drafts) → `artifact generate` (produces state-grounded outputs, auto-bound to the sufficiency report) → `wake` (scheduled proactive cycle) → `tui` (your daily-driver workspace).
 
-### 5. Sufficiency check before producing an artifact
-
-The Sufficiency Gate explicitly identifies missing information and maps each
-gap to candidate stakeholders before you generate anything:
-
-```bash
-uv run praxis check spec "MVP functional requirements for online loan flow" -e .
-```
-
-The output names every information need with `known` / `partial` / `unknown`
-status, cites the decisions and constraints that satisfy each need by ID, and
-suggests:
-
-```
-Next: run praxis elicit --latest -e . to convert these gaps into
-open questions and stakeholder-targeted drafted emails.
-```
-
-### 6. Elicit drafts
-
-```bash
-uv run praxis elicit --latest -e .
-```
-
-For each gap the gate identified, this produces a draft message (subject +
-body + target stakeholder) and registers the corresponding open question
-in the engagement.
-
-### 7. Generate a state-grounded artifact
-
-```bash
-uv run praxis artifact generate scope-brief -e . --json
-```
-
-The output is a Markdown scope brief generated **only** from your engagement
-facts, with an inline source note. The result is auto-bound to the latest
-matching sufficiency report so the artifact's evidence trail is one click
-away.
-
-### 8. Daily status snapshot
-
-```bash
-uv run praxis status -e .
-```
-
-```
-Engagement Status: Acme Loan Intake
-┌─────────────────────────────────┬──────────┐
-│ Stakeholders                    │ 4        │
-│ Glossary terms                  │ 3        │
-│ Decisions                       │ 2        │
-│ Constraints                     │ 3        │
-│ Risks                           │ 1        │
-│ Open questions                  │ 3 / 3    │
-│ Human work-items (active/total) │ 2 / 2    │
-│ Agent work-items (active/total) │ 1 / 1    │
-│ Last sufficiency                │ insufficient (2026-05-17) │
-│ Last wake                       │ 2026-05-17T08:32:00Z │
-└─────────────────────────────────┴──────────┘
-
-Top critical open questions:
-  - [b7f...] What is the explicit launch deadline?
-```
-
-### 9. Proactive wake cycle
-
-```bash
-uv run praxis wake -e .
-```
-
-The wake cycle detects state changes since the last wake, processes
-insufficient sufficiency reports into actionable elicit tasks, and surfaces
-stalled questions. **Idempotent** — repeat wakes don't pile up duplicate
-work items, and PII-looking input in chat or ask emits a warning before
-hitting the provider.
-
-### 10. The TUI — your daily-driver workspace
-
-```bash
-uv run praxis tui -e .
-```
-
-Nine screens, live auto-refresh, switchable by number key. Screenshots below.
+→ **Full setup-to-output walkthrough with real captured output blocks at every step:** [`docs/how-to/first-engagement.md`](docs/how-to/first-engagement.md). Cold-runs end-to-end on a fresh checkout; the non-LLM steps are exercised by CI on every push.
 
 ---
 

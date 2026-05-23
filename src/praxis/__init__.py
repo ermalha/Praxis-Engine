@@ -1,6 +1,19 @@
 """Praxis — an agent-led framework for IT business analysis."""
 
-from praxis.errors import PraxisError
+import os as _os
 
-__version__ = "0.3.0"
+# D-047 / RW-019: configure structlog at package import. Several submodules
+# call ``structlog.get_logger(...)`` at their module top-level; the default
+# structlog factory writes to stdout, which corrupts ``praxis ... --json |
+# jq`` pipelines. Configure once, here, before any submodule loads.
+# Library consumers who want their own logging config can call
+# ``structlog.configure(...)`` again after importing — structlog's
+# configure() is idempotent and replaces prior settings.
+from praxis.logging_setup import configure_logging as _configure_logging
+
+_configure_logging(debug=_os.environ.get("PRAXIS_DEBUG") == "1")
+
+from praxis.errors import PraxisError  # noqa: E402
+
+__version__ = "0.3.1"
 __all__ = ["PraxisError", "__version__"]
