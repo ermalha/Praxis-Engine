@@ -15,5 +15,5 @@ _configure_logging(debug=_os.environ.get("PRAXIS_DEBUG") == "1")
 
 from praxis.errors import PraxisError  # noqa: E402
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __all__ = ["PraxisError", "__version__"]
