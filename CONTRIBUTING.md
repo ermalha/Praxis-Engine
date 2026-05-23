@@ -22,6 +22,7 @@ If all three of the last commands are green and the tests pass, you're good.
 - **Coding conventions:** `chunks/00-conventions.md`
 - **Build status and roadmap:** `chunks/STATUS.md`
 - **Per-feature briefs (the build plan):** `chunks/01-skeleton.md` through `chunks/15-skills-library.md`
+- **User-facing walkthrough:** `docs/how-to/first-engagement.md` — must remain runnable on a fresh checkout. CI exercises the non-LLM steps on every push (`tests/integration/test_tour_offline.py`); if you change a CLI surface used in the walkthrough, update the doc and the test in the same PR.
 
 ## What we accept
 
