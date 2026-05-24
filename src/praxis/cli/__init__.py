@@ -14,7 +14,7 @@ from .config_cmd import config_app
 from .doctor_cmd import doctor_app
 from .elicit_cmd import elicit
 from .email_cmd import email_app
-from .engagement_cmd import engagement_app
+from .engagement import engagement_app
 from .init_cmd import init
 from .integrations_cmd import integrations_app
 from .profile import profile_app
