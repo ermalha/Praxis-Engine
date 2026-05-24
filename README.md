@@ -32,7 +32,7 @@ default surface is a work-queue and a typed engagement model — not a chat box.
 
 ## Status
 
-**Latest release: [v0.4.0](https://github.com/ermalha/Praxis-Engine/releases/tag/v0.4.0)** — adoption-surface batch: `chat --message` for scripting, friendlier provider errors, completed assumption/constraint CRUD.
+**Latest release: [v1.0.0](https://github.com/ermalha/Praxis-Engine/releases/tag/v1.0.0)** — production-ready architecture. See [STABILITY.md](STABILITY.md) for SemVer + deprecation policy.
 
 Active development. The build plan is in `PROJECT.md` (architecture & principles)
 and the per-feature briefs are in `chunks/`. Track progress in
@@ -52,12 +52,12 @@ and the per-feature briefs are in `chunks/`. Track progress in
 
 ```bash
 uv tool install --python 3.12 \
-  "praxis-ba[all] @ git+https://github.com/ermalha/Praxis-Engine.git@v0.4.0"
-praxis version    # → praxis 0.4.0
+  "praxis-ba[all] @ git+https://github.com/ermalha/Praxis-Engine.git@v1.0.0"
+praxis version    # → praxis 1.0.0
 ```
 
 This drops `praxis` onto your `PATH` in an isolated environment. Replace
-`@v0.4.0` with whatever release tag you want; `git+...@main` works too for
+`@v1.0.0` with whatever release tag you want; `git+...@main` works too for
 the development tip.
 
 **Development install (clone + uv sync):**

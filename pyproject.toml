@@ -1,6 +1,6 @@
 [project]
 name = "praxis-ba"
-version = "0.4.0"
+version = "1.0.0"
 description = "An agent-led framework for IT business analysis"
 readme = "README.md"
 license = "MIT"

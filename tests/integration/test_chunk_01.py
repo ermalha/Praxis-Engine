@@ -19,7 +19,7 @@ from praxis.errors import (
 
 
 def test_version_string() -> None:
-    assert __version__ == "0.4.0"
+    assert __version__ == "1.0.0"
 
 
 def test_all_error_classes_inherit_from_praxis_error() -> None:
@@ -69,4 +69,4 @@ def test_cli_version_command() -> None:
         text=True,
         check=True,
     )
-    assert "praxis 0.4.0" in result.stdout
+    assert "praxis 1.0.0" in result.stdout
