@@ -14,7 +14,8 @@ from .config_cmd import config_app
 from .doctor_cmd import doctor_app
 from .elicit_cmd import elicit
 from .email_cmd import email_app
-from .engagement_cmd import engagement_app
+from .engagement import engagement_app
+from .export_cmd import export_app
 from .init_cmd import init
 from .integrations_cmd import integrations_app
 from .profile import profile_app
@@ -55,6 +56,7 @@ app.add_typer(config_app)
 app.add_typer(audit_app)
 app.add_typer(doctor_app)
 app.add_typer(engagement_app)
+app.add_typer(export_app)
 app.add_typer(queue_app)
 app.add_typer(session_app)
 app.add_typer(skill_app)

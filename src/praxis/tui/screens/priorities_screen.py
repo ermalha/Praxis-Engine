@@ -6,11 +6,14 @@ import contextlib
 import json
 from pathlib import Path
 
+import structlog
 from rich.markup import escape as rich_escape
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Static
+
+logger = structlog.get_logger(component="tui.priorities")
 
 _MAX_PER_SECTION = 5
 _PRIORITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -92,8 +95,18 @@ class PrioritiesScreen(Screen[None]):
                 for q in OpenQuestionsRepo(self._engagement_path).list_all()
                 if q.status in _OPEN_STATUSES and q.priority == "critical"
             ]
-        except Exception:  # noqa: BLE001
-            questions = []
+        except Exception as exc:  # noqa: BLE001 — TUI stays alive on partial repo failures
+            # D-061: don't silently degrade. Log it AND show a dim marker so
+            # the user knows the section is showing nothing because of an
+            # error, not because the section is genuinely empty.
+            logger.warning(
+                "priorities.section_load_failed",
+                section="critical_questions",
+                error=str(exc),
+                exc_info=True,
+            )
+            lines.append(f"  [dim]⚠ Could not load: {rich_escape(str(exc))}[/dim]")
+            return "\n".join(lines)
         questions.sort(key=lambda q: q.created_at)
         if not questions:
             lines.append("  [dim](none)[/dim]")
@@ -112,8 +125,15 @@ class PrioritiesScreen(Screen[None]):
                 for q in OpenQuestionsRepo(self._engagement_path).list_all()
                 if q.status in _OPEN_STATUSES
             ]
-        except Exception:  # noqa: BLE001
-            questions = []
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "priorities.section_load_failed",
+                section="oldest_unanswered",
+                error=str(exc),
+                exc_info=True,
+            )
+            lines.append(f"  [dim]⚠ Could not load: {rich_escape(str(exc))}[/dim]")
+            return "\n".join(lines)
         questions.sort(key=lambda q: q.created_at)
         if not questions:
             lines.append("  [dim](none)[/dim]")
@@ -132,8 +152,15 @@ class PrioritiesScreen(Screen[None]):
         lines = ["[bold]Top active work items[/bold]"]
         try:
             items = WorkQueueRepo(self._engagement_path).list(limit=200)
-        except Exception:  # noqa: BLE001
-            items = []
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "priorities.section_load_failed",
+                section="top_workitems",
+                error=str(exc),
+                exc_info=True,
+            )
+            lines.append(f"  [dim]⚠ Could not load: {rich_escape(str(exc))}[/dim]")
+            return "\n".join(lines)
         active = [i for i in items if i.status.value in _ACTIVE_STATUSES]
         active.sort(key=lambda i: (_PRIORITY_RANK.get(i.priority.value, 9), i.created_at))
         if not active:

@@ -9,14 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from praxis.audit import emit
-from praxis.config.loader import load_engagement_config
 from praxis.config.models import ProfileConfig
-from praxis.engagement.repos.assumptions import AssumptionsConstraintsRepo
-from praxis.engagement.repos.decisions import DecisionRepo
-from praxis.engagement.repos.glossary import GlossaryRepo
-from praxis.engagement.repos.questions import OpenQuestionsRepo
-from praxis.engagement.repos.risks import RiskRepo
-from praxis.engagement.repos.stakeholders import StakeholderRepo
+from praxis.storage.files import atomic_write_text
 from praxis.transport import ChatRequest, Message, Transport
 
 from .models import ArtifactResult
@@ -88,7 +82,10 @@ def generate_artifact(
     content = response.content
     directory = _safe_artifact_dir(engagement_path, output_dir)
     path = directory / f"{_slug(artifact_kind)}-{now.strftime('%Y%m%dT%H%M%SZ')}.md"
-    path.write_text(content, encoding="utf-8")
+    # D-060: atomic write — generated artifacts are the analyst's deliverable;
+    # a process kill mid-write would leave a truncated Markdown file that
+    # ``artifact list`` would still surface as valid.
+    atomic_write_text(path, content)
     resolved = path.resolve()
     emit(
         "artifact.created",
@@ -133,19 +130,17 @@ def list_artifacts(engagement_path: Path) -> list[ArtifactResult]:
 
 
 def build_artifact_prompt(engagement_path: Path, artifact_kind: str, prompt: str) -> str:
-    """Build a compact prompt from persisted engagement state."""
-    eng = load_engagement_config(engagement_path)
-    sections = [
-        f"Engagement: {eng.name}",
-        f"Methodology: {eng.methodology.value}",
-        _stakeholder_section(engagement_path),
-        _glossary_section(engagement_path),
-        _questions_section(engagement_path),
-        _assumptions_constraints_section(engagement_path),
-        _risks_section(engagement_path),
-        _decisions_section(engagement_path),
-    ]
-    state = "\n\n".join(section for section in sections if section.strip())
+    """Build a compact prompt from persisted engagement state.
+
+    D-059: the engagement-state portion of the prompt is now produced by
+    :func:`praxis.engagement.snapshot.render_snapshot_for_llm` with
+    ``purpose="artifact"``. This function keeps ownership of the LLM
+    system instruction + artifact-kind + user-request framing.
+    """
+    from praxis.engagement.snapshot import build_engagement_snapshot, render_snapshot_for_llm
+
+    snapshot = build_engagement_snapshot(engagement_path)
+    state = render_snapshot_for_llm(snapshot, purpose="artifact")
     return (
         "You are Praxis, an IT business analyst. Generate the requested artifact using ONLY "
         "the persisted engagement facts below. Do not switch projects. Do not invent firm "
@@ -168,47 +163,3 @@ def _safe_artifact_dir(engagement_path: Path, output_dir: str) -> Path:
 def _slug(value: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
     return slug or "artifact"
-
-
-def _stakeholder_section(path: Path) -> str:
-    items = StakeholderRepo(path).list_all()
-    lines = [f"- {item.name}: {item.role} [{item.id}]" for item in items]
-    return "Stakeholders:\n" + "\n".join(lines) if lines else "Stakeholders: none"
-
-
-def _glossary_section(path: Path) -> str:
-    terms = GlossaryRepo(path).load().terms
-    lines = [f"- {term.term}: {term.definition}" for term in terms]
-    return "Glossary:\n" + "\n".join(lines) if lines else "Glossary: none"
-
-
-def _questions_section(path: Path) -> str:
-    questions = OpenQuestionsRepo(path).list_all()
-    lines = [f"- [{q.status}] {q.question} ({q.priority})" for q in questions]
-    return "Questions:\n" + "\n".join(lines) if lines else "Questions: none"
-
-
-def _assumptions_constraints_section(path: Path) -> str:
-    repo = AssumptionsConstraintsRepo(path)
-    assumptions = [f"- {item.statement}" for item in repo.list_assumptions()]
-    constraints = [
-        f"- [{item.constraint_type}] {item.statement}" for item in repo.list_constraints()
-    ]
-    return (
-        "Assumptions:\n"
-        + ("\n".join(assumptions) if assumptions else "none")
-        + "\n\nConstraints:\n"
-        + ("\n".join(constraints) if constraints else "none")
-    )
-
-
-def _risks_section(path: Path) -> str:
-    risks = RiskRepo(path).list_all()
-    lines = [f"- [{r.likelihood}/{r.impact}] {r.title}: {r.description}" for r in risks]
-    return "Risks:\n" + "\n".join(lines) if lines else "Risks: none"
-
-
-def _decisions_section(path: Path) -> str:
-    decisions = DecisionRepo(path).list_all()
-    lines = [f"- [{d.status}] {d.title}: {d.decision}" for d in decisions]
-    return "Decisions:\n" + "\n".join(lines) if lines else "Decisions: none"

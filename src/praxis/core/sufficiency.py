@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 
 from praxis.audit import emit
 from praxis.errors import SufficiencyError
+from praxis.storage.files import atomic_write_text
 from praxis.transport.base import Transport
 from praxis.transport.models import ChatRequest, Message
 
@@ -166,112 +167,37 @@ def _build_gate_prompt(
 # ---------------------------------------------------------------------------
 
 
-_DECISION_BODY_LIMIT = 300
-_DECISION_CONTEXT_LIMIT = 150
-_MAX_ASSUMPTIONS = 5
-
-
 def _collect_engagement_context(engagement_path: Path) -> str | None:
     """Summarise available engagement data for the gate prompt.
 
-    D-038: Decisions and constraints are included with full bodies (capped)
+    D-038: decisions and constraints are included with full bodies (capped)
     so the LLM can recognise when a persisted decision answers an
     information need and cite the ID(s) in ``have``.
+
+    D-059: implementation now delegates to
+    :func:`praxis.engagement.snapshot.render_snapshot_for_llm` with
+    ``purpose="sufficiency"``. The single repo-read pass + per-purpose
+    formatting policy live there. The empty-state contract (``None``
+    when no entities are present) is preserved.
     """
-    from praxis.engagement import (
-        AssumptionsConstraintsRepo,
-        DecisionRepo,
-        GlossaryRepo,
-        StakeholderRepo,
-    )
-
-    parts: list[str] = []
+    from praxis.engagement.snapshot import build_engagement_snapshot, render_snapshot_for_llm
 
     try:
-        stakeholders = StakeholderRepo(engagement_path).list_all()
-        if stakeholders:
-            lines = ["Known stakeholders:"]
-            for s in stakeholders:
-                lines.append(f"  - {s.id}: {s.name} ({s.role})")
-            parts.append("\n".join(lines))
-    except Exception:  # noqa: BLE001
-        pass
-
-    # D-038: full decision bodies so the gate can credit decisions in `have`.
-    try:
-        decisions = sorted(
-            DecisionRepo(engagement_path).list_all(),
-            key=lambda d: d.created_at,
-            reverse=True,
+        snapshot = build_engagement_snapshot(engagement_path)
+    except Exception as exc:  # noqa: BLE001 — gate must keep working
+        # D-061: don't degrade silently. Log it so the operator can see
+        # "the gate ran but its prompt had no engagement context because
+        # the snapshot failed" instead of silently producing a worse verdict.
+        logger.warning(
+            "sufficiency.snapshot_build_failed",
+            engagement_path=str(engagement_path),
+            error=str(exc),
+            exc_info=True,
         )
-        if decisions:
-            lines = ["Decisions (cite IDs in `have` when they answer a need):"]
-            for d in decisions:
-                body = d.decision.strip().replace("\n", " ")
-                if len(body) > _DECISION_BODY_LIMIT:
-                    body = body[: _DECISION_BODY_LIMIT - 1] + "…"
-                ctx = d.context.strip().replace("\n", " ")
-                if len(ctx) > _DECISION_CONTEXT_LIMIT:
-                    ctx = ctx[: _DECISION_CONTEXT_LIMIT - 1] + "…"
-                lines.append(f"  - [{d.id}] {d.title} — {body} | context: {ctx}")
-            parts.append("\n".join(lines))
-    except Exception:  # noqa: BLE001
-        pass
+        return None
 
-    # D-038: constraints with type + statement (not just count).
-    try:
-        ac_repo = AssumptionsConstraintsRepo(engagement_path)
-        constraints = ac_repo.list_constraints()
-        if constraints:
-            lines = ["Constraints (cite IDs in `have` when they bound a need):"]
-            for c in constraints:
-                lines.append(f"  - [{c.id}] ({c.constraint_type}) {c.statement}")
-            parts.append("\n".join(lines))
-
-        assumptions = sorted(ac_repo.list_assumptions(), key=lambda a: a.created_at, reverse=True)[
-            :_MAX_ASSUMPTIONS
-        ]
-        if assumptions:
-            lines = ["Recent assumptions:"]
-            for a in assumptions:
-                lines.append(f"  - [{a.id}] {a.statement}")
-            parts.append("\n".join(lines))
-    except Exception:  # noqa: BLE001
-        pass
-
-    try:
-        glossary = GlossaryRepo(engagement_path).load()
-        if glossary.terms:
-            parts.append(f"Glossary: {len(glossary.terms)} terms defined")
-    except Exception:  # noqa: BLE001
-        pass
-
-    # Count other engagement data
-    praxis_dir = engagement_path / ".praxis" / "engagement"
-    for filename, label in [
-        ("open-questions.yaml", "open questions"),
-        ("risks.yaml", "risks"),
-    ]:
-        path = praxis_dir / filename
-        if path.exists():
-            try:
-                import yaml
-
-                with open(path) as f:
-                    data = yaml.safe_load(f) or {}
-                items = data.get(filename.replace(".yaml", "").replace("-", "_"), [])
-                if not items:
-                    # Try common key patterns
-                    for key in data:
-                        if isinstance(data[key], list):
-                            items = data[key]
-                            break
-                if items:
-                    parts.append(f"{len(items)} {label}")
-            except Exception:  # noqa: BLE001
-                pass
-
-    return "\n".join(parts) if parts else None
+    rendered = render_snapshot_for_llm(snapshot, purpose="sufficiency")
+    return rendered or None
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +258,10 @@ def _persist_report(
     filename = f"{report_id}.json"
     path = reports_dir / filename
 
-    path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    # D-060: atomic write — sufficiency reports are part of the audit/evidence
+    # trail; a partial write would corrupt the report for downstream binding
+    # (D-037) and elicitation (D-034).
+    atomic_write_text(path, report.model_dump_json(indent=2))
     return path
 
 

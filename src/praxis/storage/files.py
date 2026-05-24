@@ -5,6 +5,7 @@ All writes are atomic: write to ``<path>.tmp``, fsync, rename.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 from pathlib import Path
@@ -53,6 +54,41 @@ def read_yaml_typed(path: Path, model: type[T]) -> T:
             path=str(path),
             errors=exc.errors(),
         ) from exc
+
+
+def atomic_write_text(path: Path, content: str, *, encoding: str = "utf-8") -> None:
+    """Atomically write *content* to *path*.
+
+    Writes to a sibling ``<stem>.tmp`` first, fsync's the data to disk, then
+    atomically renames into place. A process killed between the write and
+    the rename leaves the *original* file (if any) intact and an orphaned
+    ``.tmp`` sibling that the next successful write will overwrite.
+
+    Used for the audit/evidence trail — sufficiency reports + generated
+    artifacts (D-060). ``rename`` is atomic on POSIX; on Windows it's
+    near-atomic (atomic when the destination already exists, replacement
+    otherwise). The risk on Windows is small enough that we don't add a
+    transactional shim today; document it loudly here if it ever bites.
+
+    Args:
+        path: Destination path. Parent directories are created if missing.
+        content: Text to write.
+        encoding: Text encoding (default utf-8).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    try:
+        with open(tmp, "w", encoding=encoding) as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp.rename(path)
+    except OSError as exc:
+        # Best-effort cleanup; don't mask the original error.
+        if tmp.exists():
+            with contextlib.suppress(OSError):
+                tmp.unlink()
+        raise StorageError(f"Cannot atomically write {path}: {exc}", path=str(path)) from exc
 
 
 def write_yaml_typed(path: Path, obj: BaseModel) -> None:

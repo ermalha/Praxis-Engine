@@ -41,7 +41,7 @@ def _make_orchestrator(eng: Path, profile_name: str | None = None) -> Orchestrat
     profile = load_profile(resolved_name)
 
     return Orchestrator(
-        agent=None,  # type: ignore[arg-type]
+        agent=None,
         profile=profile,
         engagement=eng_config,
         engagement_path=eng,

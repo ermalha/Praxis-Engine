@@ -7,6 +7,133 @@ and Praxis adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [1.0.0] — 2026-05-24
+
+**Theme:** Production-ready architecture.
+
+The Hermes external audit (2026-05-18) verified v0.3.0 was a "good
+place for an early public/open-source release" and proposed thirteen
+items to harden the architecture before the project grew further.
+v1.0.0 closes all of them. Effective with this release, Praxis adopts
+the SemVer + deprecation policy spelled out in [STABILITY.md](STABILITY.md):
+CLI subcommands + flags, JSON outputs, on-disk engagement file formats,
+the evidence-bundle manifest schema, environment-variable surface, and
+top-level Python re-exports are now public surfaces under those
+guarantees.
+
+### Correctness (Tier A)
+
+- **D-057** — Fix TUI wake/profile plumbing. `action_manual_wake`
+  now uses `load_profile(self._profile_name)` instead of a hard-coded
+  `"default"`; `Orchestrator.__init__` accepts `agent: Agent | None`,
+  removing two `# type: ignore[arg-type]` smells. Hermes #2.
+- **D-058** — `WorkQueueRepo.list()` filters `assignee` in SQL
+  (indexed column) instead of after `LIMIT`. Fixes silent
+  under-reporting when the first N rows happened to be of another
+  assignee. New migration `002_workitems_assignee.sql` adds the
+  column + backfills via `json_extract(payload_json, '$.assignee')`.
+  Hermes #6.
+
+### Architecture foundations (Tier B)
+
+- **D-059** — New `praxis.engagement.snapshot` module. Three
+  LLM-prompt sites (`ask`, `check`, `artifact generate`) now route
+  through one read model (`build_engagement_snapshot` +
+  `render_snapshot_for_llm(purpose=...)`). Byte-equivalent prompt
+  output verified by tests against the legacy builders. Net -190
+  lines of duplicated engagement-context construction. Hermes #3.
+- **D-060** — Atomic writes for sufficiency reports + generated
+  artifacts via new `praxis.storage.files.atomic_write_text`. The
+  audit/evidence trail is no longer at risk of partial-write
+  corruption. Hermes #4.
+- **D-061** — Replace silent `except Exception: pass` with structured
+  `logger.warning(...)` calls in the sufficiency-gate context
+  builder + Priorities-screen section renderers. TUI sections render
+  a dim "⚠ Could not load" marker on degradation so the operator
+  sees the failure mode. Hermes #5.
+
+### Test + release quality (Tier C)
+
+- **D-062** — Real Textual pilot tests via `app.run_test()`: numeric-
+  key screen switching, full 1→9 sweep mount, queue / priorities /
+  artifact-viewer rendering, `w`-keybind manual wake. Shared demo-
+  engagement seeder (`tests/integration/_tui_seed.py`) used by both
+  the pilot tests and the screenshot generator so they can't drift.
+  Hermes #1.
+- **D-063** — CI matrix extended to Python 3.13. New
+  `package-verification` job: `uv build` + clean-install smoke
+  (`praxis version` / `praxis --help` / `praxis tui --smoke`) +
+  minimal-install smoke (no extras) that proves the lazy-import
+  boundary holds. Hermes #8.
+
+### Maintainability (Tier D)
+
+- **D-064** — Split `cli/engagement_cmd.py` (1059 LOC) into a
+  per-entity package (`cli/engagement/glossary.py`, `stakeholders.py`,
+  …). 80–175 LOC per submodule. Byte-identical command surface; pure
+  refactor verified by D-052's 12 integration tests passing
+  unchanged. Hermes #7.
+
+### Surface (Tier E)
+
+- **D-065** — PII guard adds `block` + `redact` modes alongside the
+  existing `warn` / `off`. `PRAXIS_PII_GUARD=block` refuses to send
+  PII-tagged input (exits 2); `=redact` replaces SSNs with `[SSN]`
+  and Luhn-valid cards with `[CC]` before the LLM call. Hermes #10.
+- **D-066** — `praxis doctor` rewritten as a first-run health check.
+  Ten read-only checks (python_version, praxis_version, active_profile,
+  model_alias, api_key_env, engagement, sqlite_state, audit_writable,
+  bundled_skills, optional_extras). Output as a rich table by
+  default; `--json` for scripting; `--strict` exits non-zero on
+  warnings. The legacy real-LLM probe behaviour moves to
+  `praxis doctor probe` for back-compat. Hermes #11.
+- **D-067** — TUI `R` keybind on Artifact Viewer regenerates the
+  selected artifact. Worker-thread LLM call (`@work(thread=True)`)
+  keeps the UI responsive; new artifact lands as a fresh timestamped
+  file (originals preserved). `app.py` plumbs `profile_name` +
+  `model_alias` into the screen. Hermes #12.
+- **D-068** — New `praxis export evidence` command. Bundles the
+  entire `.praxis/` tree + a content-hashed `MANIFEST.json` as
+  `zip` / `tar.gz` / `dir`. Deterministic hashes (sorted walk) for
+  audit-trust. Hermes called this "the strongest v1.0
+  differentiator." Hermes #13.
+
+### Quality
+
+- **657 tests passing** (was 624 at v0.4.0, +33), coverage **85.10%**.
+- CI green on **Python 3.11, 3.12, 3.13** + the new
+  package-verification job.
+- All four gates green per commit: `pytest`, `ruff check`,
+  `ruff format`, `mypy --strict src/praxis` (125 source files).
+- 13 conventional commits since v0.4.0 (D-057..D-068 + release bump).
+
+### Real-world verification
+
+A retest of the v0.3.0 scenarios against this release is documented at
+`~/praxis-realworld-eval/retest-v1.0.0.md` (eval workspace; not in
+the repo).
+
+### Known limitations / deferred
+
+- **TUI Artifact Viewer `g` (new) + `c` (sufficiency-check row)
+  keybinds** — Hermes's spec lists 4 keybinds; v1.0 ships `r` + `R`.
+  Queued for v1.1.
+- **Profile-level `pii_guard_mode` field** + per-command
+  `--pii-guard` flag — env-var only today (Hermes #10 minimum spec).
+  Queued.
+- **`praxis import evidence <bundle>`** to restore from an evidence
+  bundle — natural follow-up to D-068. Queued.
+- **GPG signing of MANIFEST.json** — defer until a security-audit-
+  driven request appears.
+- **PyPI publish** — the `uv tool install git+...@v1.0.0` form
+  remains the install path. PyPI listing is queued for v1.0.1.
+- **`run_cmd.py:status` + TUI `engagement_screen` / `priorities_screen`
+  migrations** to the EngagementSnapshot read model (D-059b
+  follow-up). The architectural foundation is in place; those
+  callers will plug in incrementally.
+
+---
+
 ## [0.4.0] — 2026-05-23
 
 **Theme:** Adoption surface — scriptable chat, friendlier errors, completed CRUD.

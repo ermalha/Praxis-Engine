@@ -101,7 +101,11 @@ class PraxisApp(App[None]):
             "config": ConfigScreen(self._engagement_path),
             "setup": ProjectSetupScreen(self._engagement_path),
             "priorities": PrioritiesScreen(self._engagement_path),
-            "artifact_viewer": ArtifactViewerScreen(self._engagement_path),
+            "artifact_viewer": ArtifactViewerScreen(
+                self._engagement_path,
+                profile_name=self._profile_name,
+                model_alias=self._model_alias,
+            ),
         }
         for name, screen in self._screens.items():
             self.install_screen(screen, name)
@@ -127,9 +131,13 @@ class PraxisApp(App[None]):
             from praxis.core.wake.models import WakeTrigger
 
             eng_config = load_engagement_config(self._engagement_path)
-            profile = load_profile("default")
+            # D-057: honor the profile the app was launched with, not a
+            # hard-coded "default". Previous behaviour silently woke under
+            # the wrong profile when the user passed ``praxis tui --profile
+            # alt-profile``.
+            profile = load_profile(self._profile_name)
             orch = Orchestrator(
-                agent=None,  # type: ignore[arg-type]
+                agent=None,
                 profile=profile,
                 engagement=eng_config,
                 engagement_path=self._engagement_path,

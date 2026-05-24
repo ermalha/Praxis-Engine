@@ -9,8 +9,12 @@ jobs:
   lint-type-test:
     runs-on: ubuntu-latest
     strategy:
+      # Don't cancel siblings when one Python version fails — we want to
+      # see whether the others passed too, since 3.13 in particular is a
+      # trust-but-verify slot (D-063).
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -38,3 +42,80 @@ jobs:
 
       - name: Test
         run: uv run pytest
+
+  package-verification:
+    # D-063 — independent of lint-type-test. Catches packaging regressions
+    # that the source-checkout CI doesn't see: broken entry point, missing
+    # wheel data, lazy-import boundary errors, missing extras metadata.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Build wheel + sdist
+        run: uv build
+
+      - name: Upload built distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+
+      - name: Clean-install smoke (all extras)
+        # Fresh venv with no project source in scope — install from the
+        # built wheel + [all] extras, then exercise the entry point.
+        run: |
+          python -m venv /tmp/clean-env
+          /tmp/clean-env/bin/pip install --upgrade pip
+          # Resolve the single built wheel path; install with [all] extras.
+          WHEEL=$(ls dist/*.whl | head -1)
+          /tmp/clean-env/bin/pip install "${WHEEL}[all]"
+
+          echo "=== praxis version ==="
+          version_out=$(/tmp/clean-env/bin/praxis version)
+          echo "$version_out"
+          echo "$version_out" | grep -q "^praxis " \
+            || (echo "FAIL: 'praxis version' did not return 'praxis <version>'" && exit 1)
+
+          echo "=== praxis --help ==="
+          /tmp/clean-env/bin/praxis --help > /dev/null
+
+          echo "=== praxis init + tui --smoke ==="
+          mkdir -p /tmp/ci-engagement
+          export PRAXIS_HOME=/tmp/ci-praxis-home
+          mkdir -p "$PRAXIS_HOME"
+          /tmp/clean-env/bin/praxis init /tmp/ci-engagement --name "CI Smoke" \
+            --methodology agile
+          smoke_out=$(/tmp/clean-env/bin/praxis tui --smoke -e /tmp/ci-engagement)
+          echo "$smoke_out"
+          echo "$smoke_out" | python -c \
+            'import json, sys; d = json.loads(sys.stdin.read()); assert d["status"] == "ok", d'
+
+      - name: Minimal-install smoke (no extras)
+        # Separate fresh venv — install the wheel WITHOUT any extras. This
+        # proves the lazy-import story holds: optional SDKs (openai,
+        # anthropic, textual, ...) are NOT required for the entry point to
+        # load. If a top-level import accidentally drags one of them in,
+        # this step fails.
+        run: |
+          python -m venv /tmp/minimal-env
+          /tmp/minimal-env/bin/pip install --upgrade pip
+          WHEEL=$(ls dist/*.whl | head -1)
+          /tmp/minimal-env/bin/pip install "${WHEEL}"
+
+          echo "=== praxis version (minimal) ==="
+          version_out=$(/tmp/minimal-env/bin/praxis version)
+          echo "$version_out"
+          echo "$version_out" | grep -q "^praxis " \
+            || (echo "FAIL: minimal-install entry point broken" && exit 1)
+
+          echo "=== praxis --help (minimal) ==="
+          /tmp/minimal-env/bin/praxis --help > /dev/null
