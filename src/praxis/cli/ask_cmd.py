@@ -11,7 +11,7 @@ from praxis.config import load_profile, resolve_model_config
 from praxis.config.profiles import get_active_profile_name
 from praxis.engagement import build_engagement_digest
 from praxis.errors import ConfigError, StorageError, TransportError
-from praxis.safety import warn_on_pii
+from praxis.safety import PIIBlockedError, apply_pii_policy
 from praxis.transport import ChatRequest, Message, make_transport
 
 console = Console()
@@ -42,7 +42,15 @@ def ask(
     ),
 ) -> None:
     """Send a one-shot question to the resolved LLM and print the response."""
-    warn_on_pii(question)
+    # D-065: PII guard now supports block/redact in addition to warn/off.
+    # ``apply_pii_policy`` may return a redacted question; it may also
+    # raise ``PIIBlockedError`` under PRAXIS_PII_GUARD=block.
+    try:
+        question, _ = apply_pii_policy(question)
+    except PIIBlockedError as exc:
+        err_console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(2) from exc
+
     resolved_profile = profile or get_active_profile_name()
     try:
         prof = load_profile(resolved_profile)

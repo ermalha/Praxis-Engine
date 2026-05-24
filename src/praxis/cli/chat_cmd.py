@@ -11,7 +11,7 @@ from praxis.config.engagement import find_engagement
 from praxis.config.profiles import get_active_profile_name
 from praxis.core.chat_runtime import ChatRuntime
 from praxis.core.models import StreamEvent
-from praxis.safety import warn_on_pii
+from praxis.safety import PIIBlockedError, apply_pii_policy
 from praxis.tools.models import ApprovalDecision
 from praxis.tools.registry import ToolSpec
 
@@ -75,7 +75,13 @@ def chat(
     # D-050: non-interactive single-turn mode. Skip the REPL banner + loop;
     # the caller wants one response and an exit code.
     if message is not None:
-        warn_on_pii(message)
+        # D-065: PII guard (block/redact in addition to warn/off).
+        try:
+            message, _ = apply_pii_policy(message)
+        except PIIBlockedError as exc:
+            err_console.print(f"[red]{exc}[/red]")
+            runtime.close()
+            raise typer.Exit(2) from exc
         try:
             for event in runtime.stream_turn(message):
                 _render_event(event)
@@ -105,8 +111,15 @@ def chat(
                     break
                 continue
 
-            # D-043: warn (don't block) on PII-looking input before sending.
-            warn_on_pii(user_input)
+            # D-043 + D-065: apply PII guard policy. In ``block`` mode the
+            # turn is skipped and the user can re-enter; in ``redact`` mode
+            # the input is masked before sending; ``warn``/``off`` keep
+            # legacy behaviour.
+            try:
+                user_input, _ = apply_pii_policy(user_input)
+            except PIIBlockedError as exc:
+                err_console.print(f"[red]{exc}[/red]")
+                continue
 
             # Stream the response
             for event in runtime.stream_turn(user_input):
