@@ -2,6 +2,10 @@
 
 
 
+https://github.com/user-attachments/assets/68add11e-2df2-4cf4-96a0-aeee4ca490c1
+
+
+
 > An open-source, **agent-led** framework for IT business analysis.
 
 Praxis is a continuously-running analytical agent that performs the work of an
